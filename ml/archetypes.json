@@ -1,0 +1,50 @@
+{
+  "expert": {
+    "label": "Expert Decision-Maker",
+    "emoji": "\ud83c\udfaf",
+    "description": "Calm, experienced, well-informed. Makes decisions methodically.",
+    "values": {
+      "time_pressure": 3,
+      "stress_level": 2,
+      "confidence_level": 9,
+      "experience_level": 9,
+      "info_completeness": 88,
+      "num_alternatives": 5
+    },
+    "risk_score": 1.62,
+    "risk_label": "Low",
+    "success_prob": 0.999
+  },
+  "average": {
+    "label": "Average Decision-Maker",
+    "emoji": "\ud83d\ude42",
+    "description": "Typical person making an everyday decision under moderate conditions.",
+    "values": {
+      "time_pressure": 5,
+      "stress_level": 5,
+      "confidence_level": 6,
+      "experience_level": 5,
+      "info_completeness": 60,
+      "num_alternatives": 3
+    },
+    "risk_score": 4.34,
+    "risk_label": "Medium",
+    "success_prob": 0.096
+  },
+  "risky": {
+    "label": "Risky Decision-Maker",
+    "emoji": "\ud83d\udea8",
+    "description": "High pressure, stressed, limited info. Classic recipe for poor outcomes.",
+    "values": {
+      "time_pressure": 9,
+      "stress_level": 8,
+      "confidence_level": 3,
+      "experience_level": 2,
+      "info_completeness": 25,
+      "num_alternatives": 1
+    },
+    "risk_score": 7.41,
+    "risk_label": "High",
+    "success_prob": 0.0
+  }
+}

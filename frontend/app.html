@@ -1,0 +1,1403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DecisionIQ — Analyzer</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#07090f; --bg2:#0c1121; --bg3:#111a2e; --bg4:#0a0f1e;
+  --cyan:#00d4ff; --violet:#7c3aed; --cyan2:#0066ff;
+  --green:#00e57a; --amber:#ffb020; --red:#ff3d5a;
+  --text:#e8f0ff; --muted:#4a5a7a; --border:rgba(0,212,255,0.1);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;cursor:none}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:linear-gradient(var(--cyan),var(--violet));border-radius:2px}
+
+#cursor{position:fixed;width:10px;height:10px;background:var(--cyan);border-radius:50%;pointer-events:none;z-index:9999;mix-blend-mode:screen}
+#cursor-ring{position:fixed;width:36px;height:36px;border:1px solid rgba(0,212,255,0.4);border-radius:50%;pointer-events:none;z-index:9998;transition:all 0.15s ease}
+#cursor-ring.hover{width:52px;height:52px;border-color:rgba(0,212,255,0.8);background:rgba(0,212,255,0.05)}
+
+/* ── SCREENS ── */
+.screen{display:none;min-height:100vh}
+.screen.active{display:flex;flex-direction:column}
+
+/* ── NAV ── */
+#app-nav{
+  position:fixed;top:0;left:0;right:0;z-index:200;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 40px;
+  background:rgba(7,9,15,0.9);backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+}
+.nav-logo{
+  font-family:'Syne',sans-serif;font-weight:800;font-size:20px;
+  background:linear-gradient(135deg,var(--cyan),var(--violet));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  text-decoration:none;
+}
+.nav-right{display:flex;align-items:center;gap:16px}
+.nav-user{
+  display:flex;align-items:center;gap:10px;
+  font-size:13px;color:var(--muted);
+}
+.nav-avatar{
+  width:34px;height:34px;border-radius:50%;
+  background:linear-gradient(135deg,var(--cyan),var(--violet));
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;font-weight:700;color:#000;
+}
+.btn-logout{
+  background:none;border:1px solid rgba(255,255,255,0.08);
+  color:var(--muted);font-size:12px;padding:6px 14px;
+  border-radius:20px;cursor:pointer;font-family:'DM Sans',sans-serif;
+  transition:all 0.2s;
+}
+.btn-logout:hover{border-color:var(--red);color:var(--red)}
+
+/* ══════════════════════════════════════
+   DASHBOARD SCREEN
+══════════════════════════════════════ */
+#screen-dashboard{
+  padding-top:80px;
+  background:var(--bg);
+}
+.dash-inner{max-width:960px;margin:0 auto;padding:40px 32px 80px;width:100%}
+
+.dash-header{margin-bottom:36px}
+.dash-greeting{
+  font-family:'Syne',sans-serif;font-size:clamp(28px,4vw,40px);
+  font-weight:800;line-height:1.1;letter-spacing:-1px;margin-bottom:6px;
+}
+.dash-sub{font-size:14px;color:var(--muted)}
+
+/* Stat cards */
+.stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:32px}
+.stat-card{
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:18px;padding:20px 22px;
+  position:relative;overflow:hidden;
+}
+.stat-card::before{
+  content:'';position:absolute;top:-30px;right:-30px;
+  width:100px;height:100px;border-radius:50%;
+  background:radial-gradient(circle,rgba(0,212,255,0.06),transparent 70%);
+}
+.sc-val{
+  font-family:'Syne',sans-serif;font-size:32px;font-weight:800;
+  line-height:1;margin-bottom:6px;
+}
+.sc-val.low{color:var(--green)}.sc-val.medium{color:var(--amber)}.sc-val.high{color:var(--red)}.sc-val.neu{color:var(--cyan)}
+.sc-lbl{font-size:12px;color:var(--muted);font-weight:500}
+
+/* Charts row */
+.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:28px}
+.chart-card{
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:18px;padding:24px;
+}
+.chart-title{
+  font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;
+  color:var(--muted);margin-bottom:16px;display:flex;align-items:center;gap:8px;
+}
+.chart-title .ct-icon{font-size:16px}
+.chart-canvas-wrap{position:relative;height:180px}
+
+/* History */
+.section-hd{
+  font-family:'Syne',sans-serif;font-size:18px;font-weight:700;
+  margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;
+}
+.btn-new{
+  display:inline-flex;align-items:center;gap:8px;
+  background:linear-gradient(135deg,var(--cyan),var(--cyan2));
+  color:#000;font-family:'Syne',sans-serif;font-weight:700;font-size:14px;
+  padding:12px 26px;border-radius:50px;border:none;cursor:pointer;
+  transition:all 0.3s;box-shadow:0 0 24px rgba(0,212,255,0.25);
+  text-decoration:none;
+}
+.btn-new:hover{transform:translateY(-2px);box-shadow:0 6px 36px rgba(0,212,255,0.4)}
+.hist-card{
+  background:var(--bg2);border:1px solid var(--border);border-radius:14px;
+  padding:14px 18px;margin-bottom:10px;
+  display:flex;align-items:center;gap:14px;cursor:pointer;
+  transition:all 0.25s;
+}
+.hist-card:hover{border-color:rgba(0,212,255,0.25);transform:translateX(4px)}
+.hist-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.hist-dot.Low{background:var(--green);box-shadow:0 0 8px var(--green)}
+.hist-dot.Medium{background:var(--amber);box-shadow:0 0 8px var(--amber)}
+.hist-dot.High{background:var(--red);box-shadow:0 0 8px var(--red)}
+.hist-text{flex:1}
+.hist-name{font-size:13px;font-weight:500}
+.hist-meta{font-size:11px;color:var(--muted);margin-top:2px}
+.hist-score{font-family:'Syne',sans-serif;font-size:20px;font-weight:800}
+.no-hist{
+  text-align:center;padding:48px;color:var(--muted);
+  font-size:14px;border:1px dashed var(--border);border-radius:18px;
+}
+
+/* ══════════════════════════════════════
+   WIZARD SCREEN
+══════════════════════════════════════ */
+#screen-wizard{
+  padding-top:80px;align-items:center;justify-content:center;
+  background:var(--bg);min-height:100vh;
+}
+.wizard-wrap{
+  width:100%;max-width:560px;padding:40px 24px;
+  animation:fadeUp 0.5s ease;
+}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}
+
+/* Progress */
+.progress-bar{
+  display:flex;align-items:center;gap:6px;margin-bottom:48px;justify-content:center;
+}
+.pb-seg{
+  height:4px;flex:1;border-radius:2px;background:rgba(255,255,255,0.07);
+  transition:background 0.4s,box-shadow 0.4s;max-width:64px;
+}
+.pb-seg.done{background:var(--violet);box-shadow:0 0 8px rgba(124,58,237,0.4)}
+.pb-seg.active{background:var(--cyan);box-shadow:0 0 10px rgba(0,212,255,0.5)}
+
+.wiz-eyebrow{
+  font-size:11px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;
+  color:var(--cyan);margin-bottom:12px;text-align:center;
+}
+.wiz-q{
+  font-family:'Syne',sans-serif;font-size:clamp(26px,5vw,36px);
+  font-weight:800;line-height:1.1;letter-spacing:-1px;
+  text-align:center;margin-bottom:10px;
+}
+.wiz-sub{
+  font-size:14px;color:var(--muted);text-align:center;
+  margin-bottom:36px;line-height:1.7;
+}
+
+/* Context grid (3 cols) */
+.ctx-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px}
+.ctx-tile{
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:18px;padding:22px 16px;cursor:pointer;
+  transition:all 0.25s;text-align:center;
+}
+.ctx-tile:hover{border-color:rgba(0,212,255,0.3);transform:translateY(-2px)}
+.ctx-tile.selected{border:2px solid var(--cyan);background:rgba(0,212,255,0.06);box-shadow:0 0 20px rgba(0,212,255,0.1)}
+.ct-icon{font-size:30px;margin-bottom:10px}
+.ct-name{font-size:14px;font-weight:600}
+.ct-sub{font-size:11px;color:var(--muted);margin-top:3px}
+
+/* Emoji grid */
+.emoji-grid{display:grid;gap:10px;margin-bottom:24px}
+.emoji-grid.cols2{grid-template-columns:repeat(2,1fr)}
+.emoji-grid.cols4{grid-template-columns:repeat(4,1fr)}
+.em-btn{
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:16px;padding:18px 12px;cursor:pointer;
+  transition:all 0.25s;text-align:center;
+  display:flex;flex-direction:column;align-items:center;gap:7px;
+}
+.em-btn:hover{border-color:rgba(0,212,255,0.3);transform:translateY(-2px)}
+.em-btn.selected{border:2px solid var(--cyan);background:rgba(0,212,255,0.07);box-shadow:0 0 16px rgba(0,212,255,0.12)}
+.em-icon{font-size:28px;transition:transform 0.2s;line-height:1}
+.em-btn.selected .em-icon{transform:scale(1.15)}
+.em-label{font-size:13px;font-weight:600}
+.em-sub{font-size:10px;color:var(--muted)}
+
+/* Percent grid */
+.pct-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:24px}
+.pct-btn{
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:14px;padding:16px 10px;cursor:pointer;
+  transition:all 0.25s;text-align:center;
+}
+.pct-btn:hover{border-color:rgba(0,212,255,0.3)}
+.pct-btn.selected{border:2px solid var(--cyan);background:rgba(0,212,255,0.07)}
+.pct-num{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--cyan)}
+.pct-lbl{font-size:10px;color:var(--muted);margin-top:3px}
+
+/* Scenario presets */
+.preset-label{
+  font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;
+  color:var(--muted);margin-bottom:10px;text-align:center;
+}
+.preset-row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:20px}
+.preset-chip{
+  background:rgba(124,58,237,0.12);border:1px solid rgba(124,58,237,0.25);
+  color:#c4b5fd;font-size:12px;font-weight:600;
+  padding:6px 16px;border-radius:50px;cursor:pointer;
+  transition:all 0.2s;
+}
+.preset-chip:hover{background:rgba(124,58,237,0.22);border-color:rgba(124,58,237,0.5)}
+
+/* Goal indicator */
+.goal-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:24px}
+.goal-tile{
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:16px;padding:18px;cursor:pointer;
+  transition:all 0.25s;display:flex;align-items:center;gap:12px;
+}
+.goal-tile:hover{border-color:rgba(0,212,255,0.3);transform:translateY(-2px)}
+.goal-tile.selected{border:2px solid var(--cyan);background:rgba(0,212,255,0.07)}
+.gt-icon{font-size:24px;flex-shrink:0}
+.gt-name{font-size:14px;font-weight:600}
+.gt-sub{font-size:11px;color:var(--muted);margin-top:2px}
+
+/* Nav buttons */
+.wiz-nav{
+  display:flex;align-items:center;justify-content:space-between;
+  gap:10px;margin-top:8px;
+}
+.btn-wiz-back{
+  background:none;border:1px solid var(--border);border-radius:50px;
+  padding:12px 24px;color:var(--muted);font-size:14px;
+  cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.2s;
+}
+.btn-wiz-back:hover{border-color:rgba(255,255,255,0.2);color:var(--text)}
+.btn-wiz-next{
+  background:linear-gradient(135deg,var(--cyan),var(--cyan2));
+  color:#000;font-family:'Syne',sans-serif;font-weight:700;font-size:14px;
+  border:none;border-radius:50px;padding:13px 32px;cursor:pointer;
+  transition:all 0.25s;opacity:0.35;pointer-events:none;
+  letter-spacing:0.03em;
+}
+.btn-wiz-next.ready{opacity:1;pointer-events:all}
+.btn-wiz-next.ready:hover{transform:translateY(-2px);box-shadow:0 4px 24px rgba(0,212,255,0.35)}
+.step-counter{font-size:12px;color:var(--muted)}
+
+/* ══════════════════════════════════════
+   LOADING SCREEN
+══════════════════════════════════════ */
+#screen-loading{
+  align-items:center;justify-content:center;background:var(--bg);
+  padding-top:80px;
+}
+.loading-inner{text-align:center;padding:40px}
+.loader-ring{
+  width:80px;height:80px;border-radius:50%;
+  border:3px solid rgba(0,212,255,0.1);
+  border-top-color:var(--cyan);
+  margin:0 auto 24px;
+  animation:spin 1s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-title{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;margin-bottom:8px}
+.loading-sub{font-size:13px;color:var(--muted)}
+.loading-steps{margin-top:24px;display:flex;flex-direction:column;gap:8px;align-items:center}
+.ls-item{
+  font-size:12px;color:var(--muted);display:flex;align-items:center;gap:8px;
+  opacity:0;animation:lsFade 0.5s ease both;
+}
+.ls-item:nth-child(1){animation-delay:0.2s}
+.ls-item:nth-child(2){animation-delay:0.8s}
+.ls-item:nth-child(3){animation-delay:1.4s}
+@keyframes lsFade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.ls-dot{width:6px;height:6px;border-radius:50%;background:var(--cyan)}
+
+/* ══════════════════════════════════════
+   RESULT SCREEN
+══════════════════════════════════════ */
+#screen-result{
+  padding-top:80px;align-items:stretch;justify-content:flex-start;
+  background:var(--bg);
+}
+.result-inner{max-width:780px;margin:0 auto;padding:36px 28px 100px;width:100%}
+
+/* Persona banner */
+.persona-banner{
+  border-radius:24px;padding:32px 32px 28px;margin-bottom:20px;
+  position:relative;overflow:hidden;
+  animation:slideIn 0.5s 0.1s cubic-bezier(0.34,1.56,0.64,1) both;
+}
+@keyframes slideIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+.persona-banner.Low{background:linear-gradient(135deg,rgba(0,229,122,0.08),rgba(0,229,122,0.04));border:1px solid rgba(0,229,122,0.2)}
+.persona-banner.Medium{background:linear-gradient(135deg,rgba(255,176,32,0.08),rgba(255,176,32,0.04));border:1px solid rgba(255,176,32,0.2)}
+.persona-banner.High{background:linear-gradient(135deg,rgba(255,61,90,0.1),rgba(255,61,90,0.04));border:1px solid rgba(255,61,90,0.25)}
+.pb-emoji{font-size:52px;margin-bottom:10px;display:block}
+.pb-type{font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:4px}
+.pb-type.Low{color:var(--green)}.pb-type.Medium{color:var(--amber)}.pb-type.High{color:var(--red)}
+.pb-name{font-family:'Syne',sans-serif;font-size:32px;font-weight:800;line-height:1.1;margin-bottom:10px;letter-spacing:-0.5px}
+.pb-desc{font-size:14px;line-height:1.8;color:var(--text);opacity:0.75;max-width:480px}
+
+/* Score badge (top right) */
+.score-badge{position:absolute;top:28px;right:28px;text-align:center}
+.sb-ring{position:relative;width:100px;height:100px;margin:0 auto 8px}
+.sb-num{
+  position:absolute;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+}
+.sb-main{font-family:'Syne',sans-serif;font-size:32px;font-weight:800;line-height:1}
+.sb-main.Low{color:var(--green)}.sb-main.Medium{color:var(--amber)}.sb-main.High{color:var(--red)}
+.sb-denom{font-size:12px;color:var(--muted)}
+.sb-label{font-size:10px;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase}
+
+/* Scorecard */
+.scorecard{
+  background:var(--bg2);border:1px solid var(--border);border-radius:18px;
+  padding:22px 24px;margin-bottom:16px;
+  display:flex;align-items:center;gap:20px;
+  animation:slideIn 0.5s 0.2s ease both;
+}
+.sc-doughnut{flex-shrink:0;position:relative;width:80px;height:80px}
+.sc-doughnut canvas{width:80px!important;height:80px!important}
+.sc-info{flex:1}
+.sc-grade{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;line-height:1;margin-bottom:4px}
+.sc-grade.A{color:var(--green)}.sc-grade.B{color:#6ee7b7}.sc-grade.C{color:var(--amber)}.sc-grade.D{color:#f97316}.sc-grade.F{color:var(--red)}
+.sc-quality{font-size:13px;color:var(--muted);margin-bottom:2px}
+.sc-quality span{color:var(--text);font-weight:600}
+.sc-bar-wrap{height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;margin-top:8px}
+.sc-bar-fill{height:100%;border-radius:3px;transition:width 1.2s ease}
+
+/* Result sections */
+.r-card{
+  background:var(--bg2);border:1px solid var(--border);border-radius:18px;
+  padding:24px;margin-bottom:16px;
+  animation:slideIn 0.5s ease both;
+}
+.r-card:nth-child(3){animation-delay:0.25s}
+.r-card:nth-child(4){animation-delay:0.35s}
+.r-card:nth-child(5){animation-delay:0.45s}
+.r-card:nth-child(6){animation-delay:0.55s}
+.r-card:nth-child(7){animation-delay:0.65s}
+.r-card:nth-child(8){animation-delay:0.75s}
+.r-hd{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:16px;
+}
+.r-title{
+  font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);
+  display:flex;align-items:center;gap:8px;
+}
+.r-title .ri{font-size:16px}
+
+/* Risk gauge */
+.gauge-track{
+  height:14px;
+  background:linear-gradient(to right,var(--green),var(--amber),var(--red));
+  border-radius:7px;position:relative;margin-bottom:10px;
+}
+.gauge-needle{
+  position:absolute;top:-10px;
+  width:5px;height:34px;background:var(--text);border-radius:3px;
+  transform:translateX(-50%);
+  transition:left 1.6s cubic-bezier(0.34,1.56,0.64,1);
+  box-shadow:0 0 12px rgba(0,212,255,0.5);
+}
+.gauge-needle::after{
+  content:'';position:absolute;bottom:-4px;left:50%;transform:translateX(-50%);
+  width:12px;height:12px;border-radius:50%;background:var(--text);
+  box-shadow:0 0 10px rgba(0,212,255,0.5);
+}
+.gauge-labels{display:flex;justify-content:space-between;font-size:11px;color:var(--muted)}
+.gauge-info{
+  text-align:center;margin-top:10px;
+  font-size:13px;color:var(--muted);
+}
+.gauge-info span{font-weight:600;color:var(--text)}
+
+/* Factor bars */
+.factor-row{margin-bottom:16px}
+.fr-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px}
+.fr-label{font-size:13px;font-weight:500}
+.fr-badge{
+  font-size:10px;padding:3px 10px;border-radius:20px;font-weight:700;letter-spacing:0.05em;
+}
+.fr-badge.danger{background:rgba(255,61,90,0.15);color:var(--red);border:1px solid rgba(255,61,90,0.25)}
+.fr-badge.safe{background:rgba(0,229,122,0.12);color:var(--green);border:1px solid rgba(0,229,122,0.2)}
+.fr-badge.neutral{background:rgba(255,176,32,0.1);color:var(--amber);border:1px solid rgba(255,176,32,0.2)}
+.fr-track{height:9px;background:rgba(255,255,255,0.05);border-radius:5px;overflow:hidden;margin-bottom:5px}
+.fr-fill{height:100%;border-radius:5px;width:0;transition:width 1.3s cubic-bezier(0.4,0,0.2,1)}
+.fr-fill.danger{background:linear-gradient(90deg,var(--amber),var(--red))}
+.fr-fill.safe{background:linear-gradient(90deg,#00b860,var(--green))}
+.fr-fill.neutral{background:var(--muted)}
+.fr-msg{font-size:11px;color:var(--muted);line-height:1.6}
+
+/* Bias pills */
+.bias-pill{
+  display:flex;gap:14px;
+  background:rgba(255,176,32,0.06);border:1px solid rgba(255,176,32,0.2);
+  border-radius:14px;padding:14px 16px;margin-bottom:10px;
+  opacity:0;transform:translateY(8px);transition:all 0.4s;
+}
+.bias-pill.visible{opacity:1;transform:none}
+.bp-icon{font-size:22px;flex-shrink:0}
+.bp-name{font-size:13px;font-weight:700;color:var(--amber);margin-bottom:3px}
+.bp-text{font-size:12px;color:var(--muted);line-height:1.6}
+.no-bias{
+  background:rgba(0,229,122,0.06);border:1px solid rgba(0,229,122,0.2);
+  border-radius:12px;padding:14px 16px;font-size:13px;color:var(--green);
+  display:flex;align-items:center;gap:8px;
+}
+
+/* What-If Simulator */
+.sim-sliders{display:flex;flex-direction:column;gap:16px;margin-bottom:20px}
+.sim-row{display:flex;align-items:center;gap:14px}
+.sim-label{font-size:12px;font-weight:500;color:var(--muted);width:130px;flex-shrink:0}
+.sim-slider{
+  flex:1;appearance:none;height:5px;
+  background:rgba(255,255,255,0.07);border-radius:3px;outline:none;cursor:pointer;
+}
+.sim-slider::-webkit-slider-thumb{
+  appearance:none;width:18px;height:18px;border-radius:50%;
+  background:linear-gradient(135deg,var(--cyan),var(--cyan2));
+  cursor:pointer;box-shadow:0 0 10px rgba(0,212,255,0.4);
+}
+.sim-val{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;width:36px;text-align:right;color:var(--cyan)}
+
+.sim-result{
+  display:flex;align-items:center;justify-content:center;gap:20px;
+  padding:20px;background:var(--bg3);border-radius:14px;margin-top:4px;
+}
+.sr-label{font-size:11px;color:var(--muted);text-align:center;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.08em}
+.sr-score{font-family:'Syne',sans-serif;font-size:36px;font-weight:800;text-align:center}
+.sr-score.Low{color:var(--green)}.sr-score.Medium{color:var(--amber)}.sr-score.High{color:var(--red)}
+.sr-arrow{font-size:28px;color:var(--muted)}
+.sr-delta{
+  font-size:12px;text-align:center;margin-top:4px;font-weight:600;
+}
+.sr-delta.better{color:var(--green)}.sr-delta.worse{color:var(--red)}.sr-delta.same{color:var(--muted)}
+
+/* Goal indicator */
+.goal-result{
+  padding:16px;border-radius:14px;font-size:13px;line-height:1.7;
+  border-left:3px solid;
+}
+.goal-result.danger{background:rgba(255,61,90,0.06);border-color:var(--red);color:#ffb3bf}
+.goal-result.warn{background:rgba(255,176,32,0.06);border-color:var(--amber);color:#ffe0a0}
+.goal-result.ok{background:rgba(0,229,122,0.06);border-color:var(--green);color:#a0ffcd}
+
+/* Action plan */
+.action-item{
+  display:flex;gap:14px;background:var(--bg3);
+  border-radius:12px;padding:14px 16px;margin-bottom:10px;
+}
+.act-num{
+  width:28px;height:28px;border-radius:50%;flex-shrink:0;
+  background:linear-gradient(135deg,var(--cyan),var(--violet));
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:800;color:#000;
+}
+.act-text{font-size:13px;line-height:1.7;color:var(--text);opacity:0.85}
+
+/* Archetype comparison */
+.arch-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.arch-card{
+  background:var(--bg3);border:1px solid var(--border);
+  border-radius:16px;padding:16px;text-align:center;
+  transition:all 0.25s;
+}
+.arch-card.you{border:2px solid var(--cyan);box-shadow:0 0 16px rgba(0,212,255,0.1)}
+.ac-emoji{font-size:26px;margin-bottom:8px}
+.ac-name{font-size:11px;font-weight:600;margin-bottom:6px;color:var(--muted)}
+.ac-score{font-family:'Syne',sans-serif;font-size:22px;font-weight:800}
+.ac-score.Low{color:var(--green)}.ac-score.Medium{color:var(--amber)}.ac-score.High{color:var(--red)}
+.ac-delta{font-size:10px;margin-top:4px}
+.ac-delta.better{color:var(--green)}.ac-delta.worse{color:var(--red)}.ac-delta.same{color:var(--muted)}
+.ac-bar{height:5px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;margin-top:8px}
+.ac-bar-fill{height:100%;border-radius:3px;transition:width 1s ease}
+
+/* Scatter */
+.scatter-legend{display:flex;gap:16px;justify-content:center;margin-bottom:12px;font-size:11px;color:var(--muted)}
+.sl-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px}
+
+/* Bottom actions */
+.result-btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px}
+.btn-r-primary{
+  padding:13px 26px;background:linear-gradient(135deg,var(--cyan),var(--cyan2));
+  color:#000;font-family:'Syne',sans-serif;font-weight:700;font-size:14px;
+  border:none;border-radius:50px;cursor:pointer;transition:all 0.25s;
+}
+.btn-r-primary:hover{transform:translateY(-2px);box-shadow:0 4px 24px rgba(0,212,255,0.35)}
+.btn-r-ghost{
+  padding:13px 26px;background:none;
+  border:1px solid var(--border);color:var(--text);
+  font-size:14px;border-radius:50px;cursor:pointer;font-family:'DM Sans',sans-serif;
+  transition:all 0.25s;
+}
+.btn-r-ghost:hover{border-color:rgba(0,212,255,0.3);color:var(--cyan)}
+
+/* ── Toast ── */
+.toast{
+  position:fixed;top:88px;right:20px;z-index:999;
+  background:var(--bg2);border:1px solid var(--border);
+  padding:12px 20px;border-radius:12px;font-size:13px;
+  animation:toastIn 0.3s ease;pointer-events:none;
+  backdrop-filter:blur(10px);
+}
+@keyframes toastIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+
+/* Responsive */
+@media(max-width:768px){
+  #cursor,#cursor-ring{display:none}
+  .stat-row{grid-template-columns:repeat(2,1fr)}
+  .charts-row{grid-template-columns:1fr}
+  .arch-grid{grid-template-columns:repeat(2,1fr)}
+  .emoji-grid.cols4{grid-template-columns:repeat(2,1fr)}
+  #app-nav{padding:14px 20px}
+  .dash-inner,.result-inner{padding-left:16px;padding-right:16px}
+  .score-badge{position:static;text-align:left;margin-top:16px}
+  .scorecard{flex-direction:column;align-items:flex-start}
+}
+</style>
+</head>
+<body>
+<div id="cursor"></div>
+<div id="cursor-ring"></div>
+
+<!-- NAV -->
+<nav id="app-nav">
+  <a href="home.html" class="nav-logo">DecisionIQ</a>
+  <div class="nav-right">
+    <div class="nav-user">
+      <div class="nav-avatar" id="nav-avatar">?</div>
+      <span id="nav-username">User</span>
+    </div>
+    <button class="btn-logout" onclick="logout()">Sign out</button>
+  </div>
+</nav>
+
+<!-- ══════════════════════════════════════
+     DASHBOARD
+══════════════════════════════════════ -->
+<div class="screen" id="screen-dashboard">
+  <div class="dash-inner">
+    <div class="dash-header">
+      <div class="dash-greeting" id="dash-greeting">Welcome back —</div>
+      <div class="dash-sub">Your decision intelligence dashboard</div>
+    </div>
+
+    <div class="stat-row">
+      <div class="stat-card">
+        <div class="sc-val neu" id="ds-total">0</div>
+        <div class="sc-lbl">Decisions analyzed</div>
+      </div>
+      <div class="stat-card">
+        <div class="sc-val" id="ds-avg">—</div>
+        <div class="sc-lbl">Avg risk score</div>
+      </div>
+      <div class="stat-card">
+        <div class="sc-val" id="ds-best">—</div>
+        <div class="sc-lbl">Best score</div>
+      </div>
+      <div class="stat-card">
+        <div class="sc-val" id="ds-trend">—</div>
+        <div class="sc-lbl">Session trend</div>
+      </div>
+    </div>
+
+    <div class="charts-row" id="charts-row" style="display:none">
+      <div class="chart-card">
+        <div class="chart-title"><span class="ct-icon">📈</span>Risk Trend This Session</div>
+        <div class="chart-canvas-wrap"><canvas id="trend-chart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title"><span class="ct-icon">🔵</span>Confidence vs Risk</div>
+        <div class="chart-canvas-wrap"><canvas id="scatter-chart"></canvas></div>
+      </div>
+    </div>
+
+    <div class="section-hd">
+      <span>Past decisions</span>
+      <button class="btn-new" onclick="startWizard()">+ Analyze a decision</button>
+    </div>
+    <div id="history-list"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     WIZARD
+══════════════════════════════════════ -->
+<div class="screen" id="screen-wizard">
+  <div class="wizard-wrap" id="wizard-wrap">
+    <div class="progress-bar" id="progress-bar"></div>
+    <div id="wizard-content"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     LOADING
+══════════════════════════════════════ -->
+<div class="screen" id="screen-loading">
+  <div class="loading-inner">
+    <div class="loader-ring"></div>
+    <div class="loading-title">Analyzing your conditions…</div>
+    <div class="loading-sub">ML model processing 6 decision parameters</div>
+    <div class="loading-steps">
+      <div class="ls-item"><span class="ls-dot"></span>Running Random Forest classifier</div>
+      <div class="ls-item"><span class="ls-dot"></span>Computing feature contributions</div>
+      <div class="ls-item"><span class="ls-dot"></span>Detecting cognitive biases</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     RESULT
+══════════════════════════════════════ -->
+<div class="screen" id="screen-result">
+  <div class="result-inner" id="result-inner"></div>
+</div>
+
+<script>
+// ═══════════════════════════════════════
+// CONFIG & STATE
+// ═══════════════════════════════════════
+const API = 'http://localhost:8000';
+const FEATURES = ['time_pressure','stress_level','confidence_level','experience_level','info_completeness','num_alternatives'];
+
+const PERSONAS = {
+  Low:{
+    names:['The Calm Strategist','The Grounded Expert','The Clear-Headed Planner'],
+    emojis:['🎯','🌿','🧭'],
+    descs:['You\'re approaching this decision with impressive clarity. Low stress, solid experience, and good information — the hallmarks of someone who will make a strong call.',
+           'Grounded, informed, composed. Your conditions reflect the preparation that separates good decisions from lucky ones.',
+           'You\'ve done the groundwork. Clear priorities, time to think, relevant experience — commit confidently.']
+  },
+  Medium:{
+    names:['The Cautious Analyst','The Under-Pressure Thinker','The Uncertain Explorer'],
+    emojis:['🔍','⚖️','🌤️'],
+    descs:['Approaching carefully, but some conditions could be stronger. A few targeted improvements can shift this into safe territory.',
+           'Thinking it through under pressure. Risk is moderate but manageable — identify which one or two factors to address.',
+           'Some uncertainty is normal. But you\'re carrying more risk than you need to. The factors below show where to focus.']
+  },
+  High:{
+    names:['The Panicked Novice','The Stressed Impulse Buyer','The Tunnel Vision Decider'],
+    emojis:['😰','🌀','⚡'],
+    descs:['Your conditions are stacked against you right now. High stress, limited info, time pressure — this is the recipe for regret. Step back first.',
+           'Several major risk factors are active. Acting now means letting the situation decide for you. Even small delays dramatically improve outcomes.',
+           'High-risk territory — not because the decision is bad, but because the conditions you\'re deciding under are. Fix the conditions first.']
+  }
+};
+
+const THRESHOLDS = {
+  time_pressure:{lo:3,hi:7,label:'Time Pressure',
+    hiMsg:'High urgency is compressing your decision window — increasing the chance of missed alternatives.',
+    loMsg:'Good time availability. Use it to verify your top 2 assumptions.',
+    advice:'If the deadline is external, push back for even 24 hours. If self-imposed, question whether the urgency is real.'},
+  stress_level:{lo:3,hi:7,label:'Stress Level',
+    hiMsg:'Elevated stress narrows focus and increases impulsive choices.',
+    loMsg:'Calm state — ideal for decision-making.',
+    advice:'5 minutes of movement or slow breathing before deciding measurably lowers cortisol and improves reasoning.'},
+  confidence_level:{lo:4,hi:8,label:'Confidence Level',
+    hiMsg:'Confidence is solid.',
+    loMsg:'Low confidence signals something important you don\'t know yet. Find out what it is.',
+    advice:'Write down the 3 things you\'re most uncertain about. Research just those.'},
+  experience_level:{lo:4,hi:8,label:'Experience Level',
+    hiMsg:'Good experience — your pattern recognition is an asset.',
+    loMsg:'Limited experience means you may not see non-obvious risks.',
+    advice:'Find someone who has made this decision before. Ask: what do you wish you\'d known?'},
+  info_completeness:{lo:40,hi:70,label:'Information Coverage',
+    hiMsg:'Well-informed — good coverage.',
+    loMsg:'You\'re deciding with less than half the picture. Strongest predictor of poor outcomes.',
+    advice:'20 minutes on your single biggest unknown can shift your risk category.'},
+  num_alternatives:{lo:2,hi:5,label:'Alternatives Considered',
+    hiMsg:'Good range — reducing anchoring bias.',
+    loMsg:'Too few alternatives. You may be anchored on your first idea.',
+    advice:'Force yourself to name one more alternative — even an absurd one. This unlocks thinking.'}
+};
+
+const BIASES = [
+  {name:'Overconfidence Bias',emoji:'🎭',test:d=>d.confidence_level>=8&&d.experience_level<=3,
+   exp:'High confidence with limited experience — a classic overconfidence pattern. Novices overestimate judgment accuracy by 30-40%.'},
+  {name:'Tunnel Vision',emoji:'⏰',test:d=>d.time_pressure>=8&&d.num_alternatives<=2,
+   exp:'Extreme time pressure + few alternatives: you\'re fixating on the first option rather than exploring better ones.'},
+  {name:'Information Illusion',emoji:'🌫️',test:d=>d.confidence_level>=7&&d.info_completeness<50,
+   exp:'Confident despite having less than 50% of relevant information — a dangerous combination.'},
+  {name:'Stress Panic',emoji:'😤',test:d=>d.stress_level>=8&&d.num_alternatives<=2,
+   exp:'High stress + few alternatives signals narrow framing — your brain under stress reduces the option space.'},
+  {name:'Analysis Paralysis',emoji:'🌀',test:d=>d.num_alternatives>=6&&d.confidence_level<=4,
+   exp:'Many alternatives with low confidence can lead to paralysis — where more options decrease decision quality.'}
+];
+
+const GOAL_RULES = {
+  Career:{
+    High:'Your current conditions (high stress, low information) are not suitable for a career-impacting decision. Career decisions made in this state have significantly lower success rates. Delay if at all possible.',
+    Medium:'Moderate risk for a career decision. These are high-stakes and often irreversible — consider improving your information coverage before committing.',
+    Low:'You\'re in a good state for a career-level decision. Conditions are favorable — proceed with intention.'
+  },
+  Academic:{
+    High:'Academic decisions under time pressure without enough experience tend to have poor outcomes. Consider delaying or getting external advice.',
+    Medium:'Moderate risk for an academic decision. Your information coverage is the key lever — spend 20 minutes on the biggest unknown.',
+    Low:'Good conditions for an academic decision. Your preparation level is solid.'
+  },
+  Personal:{
+    High:'Personal decisions made under high stress are often regretted. Give yourself a minimum 24-hour buffer before committing.',
+    Medium:'Moderate conditions for a personal decision. Reducing stress by even a few points can significantly improve your judgment quality.',
+    Low:'Your personal conditions are healthy for this decision. Proceed thoughtfully.'
+  },
+  Financial:{
+    High:'Financial decisions under these conditions carry a high risk of loss or regret. High stress, low information, and time pressure are the exact factors that cause financial mistakes. Do not commit today.',
+    Medium:'Moderate risk for a financial decision. Get a second opinion and verify your information before committing.',
+    Low:'Good conditions for a financial decision. Your preparation and calm state are your biggest assets.'
+  }
+};
+
+const ARCHETYPES_DATA = {
+  expert:{label:'Expert',emoji:'🎯',risk_score:2.1,risk_label:'Low'},
+  average:{label:'Average',emoji:'🙂',risk_score:5.2,risk_label:'Medium'},
+  risky:{label:'Risky',emoji:'🚨',risk_score:7.8,risk_label:'High'}
+};
+
+let currentUser = '';
+let sessionHistory = [];
+let currentResult = null;
+let currentAnswers = {};
+let wizStep = 0;
+let trendChart = null, scatterChart = null, doughnutChart = null;
+
+// ═══════════════════════════════════════
+// WIZARD STEPS DEFINITION
+// ═══════════════════════════════════════
+const STEPS = [
+  {key:'goal',type:'goal',
+   eyebrow:'Step 1 of 8',q:'What category is this decision?',
+   sub:'This enables context-specific guidance on top of the ML analysis',
+   opts:[{val:'Career',icon:'💼',name:'Career',sub:'Job, role, business'},
+         {val:'Academic',icon:'📚',name:'Academic',sub:'Study, project, skill'},
+         {val:'Personal',icon:'🏠',name:'Personal',sub:'Life & relationships'},
+         {val:'Financial',icon:'💰',name:'Financial',sub:'Money & investment'}]},
+  {key:'context',type:'ctx',
+   eyebrow:'Step 2 of 8',q:'What type of decision is this?',
+   sub:'Helps calibrate the risk model',
+   presets:true,
+   opts:[{val:'personal',icon:'🏠',name:'Personal',sub:'Life choices'},
+         {val:'academic',icon:'📚',name:'Academic',sub:'Study & projects'},
+         {val:'professional',icon:'💼',name:'Professional',sub:'Work & career'}]},
+  {key:'time_pressure',type:'emoji',cols:4,
+   eyebrow:'Step 3 of 8',q:'How much time pressure are you under?',
+   sub:'This is one of the strongest risk drivers — be honest',
+   opts:[{val:2,icon:'🧘',label:'Relaxed',sub:'Plenty of time'},
+         {val:5,icon:'😐',label:'Moderate',sub:'Some pressure'},
+         {val:8,icon:'🏃',label:'Rushing',sub:'Very urgent'},
+         {val:10,icon:'🔥',label:'Crisis',sub:'Decide NOW'}]},
+  {key:'stress_level',type:'emoji',cols:4,
+   eyebrow:'Step 4 of 8',q:'How stressed do you feel right now?',
+   sub:'About this decision specifically',
+   opts:[{val:1,icon:'😌',label:'Calm',sub:'Clear head'},
+         {val:4,icon:'😐',label:'A bit tense',sub:'Manageable'},
+         {val:7,icon:'😰',label:'Stressed',sub:'Affecting focus'},
+         {val:10,icon:'😱',label:'Overwhelmed',sub:'Hard to think'}]},
+  {key:'confidence_level',type:'emoji',cols:4,
+   eyebrow:'Step 5 of 8',q:'How confident do you feel?',
+   sub:'Your gut sense — not how much you know',
+   opts:[{val:2,icon:'😟',label:'Very unsure',sub:'No idea'},
+         {val:5,icon:'🤔',label:'Uncertain',sub:'Some doubts'},
+         {val:7,icon:'🙂',label:'Fairly confident',sub:'Mostly clear'},
+         {val:9,icon:'💪',label:'Confident',sub:'I know this'}]},
+  {key:'experience_level',type:'emoji',cols:4,
+   eyebrow:'Step 6 of 8',q:'How experienced are you with this type of decision?',
+   sub:'Have you faced similar choices before?',
+   opts:[{val:1,icon:'🌱',label:'First time',sub:'Completely new'},
+         {val:4,icon:'📖',label:'Some exposure',sub:'Done it once or twice'},
+         {val:7,icon:'🎓',label:'Experienced',sub:'Done this before'},
+         {val:10,icon:'⭐',label:'Expert',sub:'This is my domain'}]},
+  {key:'info_completeness',type:'pct',
+   eyebrow:'Step 7 of 8',q:'How much relevant information do you have?',
+   sub:'Give a rough percentage of the picture you have',
+   opts:[{val:20,label:'~20%',sub:'Almost none'},
+         {val:40,label:'~40%',sub:'Part of the picture'},
+         {val:60,label:'~60%',sub:'More than half'},
+         {val:80,label:'~80%',sub:'Mostly informed'},
+         {val:95,label:'~95%',sub:'Very thorough'},
+         {val:100,label:'100%',sub:'Fully informed'}]},
+  {key:'num_alternatives',type:'emoji',cols:4,
+   eyebrow:'Step 8 of 8',q:'How many real options are you considering?',
+   sub:'Not just yes/no — distinct real alternatives',
+   opts:[{val:1,icon:'👉',label:'Just one',sub:'One path only'},
+         {val:2,icon:'⚖️',label:'Two choices',sub:'Binary decision'},
+         {val:4,icon:'🔀',label:'3-4 options',sub:'Good range'},
+         {val:6,icon:'🎯',label:'5+ options',sub:'Thoroughly explored'}]}
+];
+
+// ═══════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════
+window.addEventListener('load', () => {
+  const user = sessionStorage.getItem('diq_user');
+  if(!user){ window.location.href='login.html'; return; }
+  currentUser = user;
+  document.getElementById('nav-avatar').textContent = user[0].toUpperCase();
+  document.getElementById('nav-username').textContent = user;
+  sessionHistory = JSON.parse(localStorage.getItem('diq_hist_'+user)||'[]');
+  // inject demo data
+  if(sessionHistory.length===0 && ['Priya','Arjun','Maya'].includes(user)){
+    sessionHistory = getDemoHistory(user);
+    saveHistory();
+  }
+  showScreen('dashboard');
+  renderDashboard();
+});
+
+function getDemoHistory(u){
+  const demos={
+    Priya:[
+      {risk_label:'Medium',risk_score:5.8,inputs:{time_pressure:6,stress_level:7,confidence_level:5,experience_level:6,info_completeness:55,num_alternatives:3},context:'academic',goal:'Academic',persona:'The Cautious Analyst',ts:'2 days ago'},
+      {risk_label:'High',risk_score:7.4,inputs:{time_pressure:9,stress_level:8,confidence_level:3,experience_level:2,info_completeness:25,num_alternatives:1},context:'personal',goal:'Personal',persona:'The Panicked Novice',ts:'5 days ago'}
+    ],
+    Arjun:[
+      {risk_label:'Low',risk_score:2.1,inputs:{time_pressure:2,stress_level:2,confidence_level:9,experience_level:8,info_completeness:88,num_alternatives:5},context:'professional',goal:'Career',persona:'The Calm Strategist',ts:'Yesterday'}
+    ],
+    Maya:[
+      {risk_label:'Medium',risk_score:4.9,inputs:{time_pressure:5,stress_level:4,confidence_level:7,experience_level:5,info_completeness:70,num_alternatives:3},context:'academic',goal:'Academic',persona:'The Uncertain Explorer',ts:'3 days ago'},
+      {risk_label:'Low',risk_score:3.1,inputs:{time_pressure:3,stress_level:3,confidence_level:8,experience_level:7,info_completeness:82,num_alternatives:4},context:'professional',goal:'Career',persona:'The Grounded Expert',ts:'1 week ago'}
+    ]
+  };
+  return demos[u]||[];
+}
+
+// ═══════════════════════════════════════
+// SCREENS
+// ═══════════════════════════════════════
+function showScreen(name){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+name).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+// ═══════════════════════════════════════
+// CURSOR
+// ═══════════════════════════════════════
+const cur=document.getElementById('cursor'),ring=document.getElementById('cursor-ring');
+let mx=0,my=0,rx=0,ry=0;
+document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;cur.style.left=(mx-5)+'px';cur.style.top=(my-5)+'px'});
+function animRing(){rx+=(mx-rx)*0.12;ry+=(my-ry)*0.12;ring.style.left=(rx-18)+'px';ring.style.top=(ry-18)+'px';requestAnimationFrame(animRing)}animRing();
+document.addEventListener('mouseover',e=>{if(e.target.matches('button,a,.em-btn,.ctx-tile,.pct-btn,.goal-tile,.hist-card,.preset-chip'))ring.classList.add('hover')});
+document.addEventListener('mouseout',e=>{if(e.target.matches('button,a,.em-btn,.ctx-tile,.pct-btn,.goal-tile,.hist-card,.preset-chip'))ring.classList.remove('hover')});
+
+// ═══════════════════════════════════════
+// AUTH
+// ═══════════════════════════════════════
+function logout(){
+  saveHistory();
+  sessionStorage.removeItem('diq_user');
+  window.location.href='login.html';
+}
+function saveHistory(){
+  localStorage.setItem('diq_hist_'+currentUser,JSON.stringify(sessionHistory));
+}
+
+// ═══════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════
+function renderDashboard(){
+  const h=new Date().getHours();
+  const greet = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+  document.getElementById('dash-greeting').textContent=(h<12?'Good morning, ':h<17?'Good afternoon, ':'Good evening, ')+currentUser+'.';
+  document.getElementById('ds-total').textContent=sessionHistory.length;
+
+  if(sessionHistory.length){
+    const scores=sessionHistory.map(h=>h.risk_score);
+    const avg=(scores.reduce((a,b)=>a+b,0)/scores.length).toFixed(1);
+    const best=Math.min(...scores).toFixed(1);
+    const trend=scores.length>=2?(scores[scores.length-1]-scores[0]).toFixed(1):null;
+    const el=document.getElementById('ds-avg');
+    el.textContent=avg;el.className='sc-val '+(avg<3.5?'low':avg<6.5?'medium':'high');
+    const be=document.getElementById('ds-best');
+    be.textContent=best;be.className='sc-val '+(best<3.5?'low':best<6.5?'medium':'high');
+    const te=document.getElementById('ds-trend');
+    if(trend!==null){
+      te.textContent=(trend>0?'▲ +':trend<0?'▼ ':'')+trend;
+      te.className='sc-val '+(trend<0?'low':trend===0?'neu':'high');
+    }else{te.textContent='—';te.className='sc-val neu'}
+    document.getElementById('charts-row').style.display='grid';
+    renderCharts();
+  }
+
+  const hl=document.getElementById('history-list');
+  if(!sessionHistory.length){
+    hl.innerHTML=`<div class="no-hist">No decisions analyzed yet.<br>Click <b>+ Analyze a decision</b> to get started.</div>`;
+    return;
+  }
+  hl.innerHTML=[...sessionHistory].reverse().map(h=>`
+    <div class="hist-card">
+      <div class="hist-dot ${h.risk_label}"></div>
+      <div class="hist-text">
+        <div class="hist-name">${h.persona||h.risk_label+' risk decision'}</div>
+        <div class="hist-meta">${h.goal||h.context||'decision'} · ${h.ts||'Just now'}</div>
+      </div>
+      <div class="hist-score" style="color:${h.risk_label==='Low'?'var(--green)':h.risk_label==='Medium'?'var(--amber)':'var(--red)'}">${h.risk_score}</div>
+    </div>`).join('');
+}
+
+function renderCharts(){
+  const scores=sessionHistory.map(h=>h.risk_score);
+  const labels=sessionHistory.map((_,i)=>'#'+(i+1));
+
+  if(trendChart){trendChart.destroy();trendChart=null}
+  const tc=document.getElementById('trend-chart').getContext('2d');
+  trendChart=new Chart(tc,{
+    type:'line',
+    data:{labels,datasets:[{
+      label:'Risk Score',data:scores,
+      borderColor:'rgba(0,212,255,0.8)',backgroundColor:'rgba(0,212,255,0.05)',
+      borderWidth:2,pointBackgroundColor:'rgba(0,212,255,1)',
+      pointRadius:5,tension:0.4,fill:true
+    }]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'rgba(100,120,160,0.8)',font:{size:11}}},
+        y:{min:0,max:10,grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'rgba(100,120,160,0.8)',font:{size:11}}}
+      }
+    }
+  });
+
+  if(scatterChart){scatterChart.destroy();scatterChart=null}
+  const sc=document.getElementById('scatter-chart').getContext('2d');
+  const scData=sessionHistory.map(h=>({x:h.inputs?.confidence_level||5,y:h.risk_score}));
+  const scColors=sessionHistory.map(h=>h.risk_label==='Low'?'rgba(0,229,122,0.8)':h.risk_label==='Medium'?'rgba(255,176,32,0.8)':'rgba(255,61,90,0.8)');
+  scatterChart=new Chart(sc,{
+    type:'scatter',
+    data:{datasets:[{label:'Sessions',data:scData,backgroundColor:scColors,pointRadius:7,pointHoverRadius:9}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:d=>`Confidence ${d.parsed.x} → Risk ${d.parsed.y}`}}},
+      scales:{
+        x:{min:1,max:10,title:{display:true,text:'Confidence Level',color:'rgba(100,120,160,0.8)',font:{size:11}},
+           grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'rgba(100,120,160,0.8)',font:{size:11}}},
+        y:{min:0,max:10,title:{display:true,text:'Risk Score',color:'rgba(100,120,160,0.8)',font:{size:11}},
+           grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'rgba(100,120,160,0.8)',font:{size:11}}}
+      }
+    }
+  });
+}
+
+// ═══════════════════════════════════════
+// WIZARD
+// ═══════════════════════════════════════
+function startWizard(){
+  currentAnswers={};wizStep=0;
+  renderWizardStep();showScreen('wizard');
+}
+
+function renderWizardStep(){
+  const step=STEPS[wizStep];
+  // Progress
+  const pb=document.getElementById('progress-bar');
+  pb.innerHTML=STEPS.map((_,i)=>`<div class="pb-seg ${i<wizStep?'done':i===wizStep?'active':''}"></div>`).join('');
+
+  const cont=document.getElementById('wizard-content');
+  let html=`<div class="wiz-eyebrow">${step.eyebrow}</div>
+    <div class="wiz-q">${step.q}</div>
+    <div class="wiz-sub">${step.sub}</div>`;
+
+  if(step.presets){
+    html+=`<div class="preset-label">Quick presets</div>
+    <div class="preset-row">
+      <div class="preset-chip" onclick="applyPreset('interview')">💼 Job Interview</div>
+      <div class="preset-chip" onclick="applyPreset('exam')">📝 Exam Strategy</div>
+      <div class="preset-chip" onclick="applyPreset('investment')">📈 Investment</div>
+      <div class="preset-chip" onclick="applyPreset('relationship')">❤️ Relationship</div>
+    </div>`;
+  }
+
+  if(step.type==='goal'){
+    html+=`<div class="goal-grid">`;
+    step.opts.forEach(o=>html+=`
+      <div class="goal-tile ${currentAnswers[step.key]===o.val?'selected':''}" onclick="selectAns('${step.key}','${o.val}',this)">
+        <span class="gt-icon">${o.icon}</span>
+        <div><div class="gt-name">${o.name}</div><div class="gt-sub">${o.sub}</div></div>
+      </div>`);
+    html+=`</div>`;
+  } else if(step.type==='ctx'){
+    html+=`<div class="ctx-grid">`;
+    step.opts.forEach(o=>html+=`
+      <div class="ctx-tile ${currentAnswers[step.key]===o.val?'selected':''}" onclick="selectAns('${step.key}','${o.val}',this)">
+        <div class="ct-icon">${o.icon}</div>
+        <div class="ct-name">${o.name}</div>
+        <div class="ct-sub">${o.sub}</div>
+      </div>`);
+    html+=`</div>`;
+  } else if(step.type==='emoji'){
+    html+=`<div class="emoji-grid ${step.cols===4?'cols4':'cols2'}">`;
+    step.opts.forEach(o=>html+=`
+      <div class="em-btn ${currentAnswers[step.key]===o.val?'selected':''}" onclick="selectAns('${step.key}',${o.val},this)">
+        <span class="em-icon">${o.icon}</span>
+        <span class="em-label">${o.label}</span>
+        <span class="em-sub">${o.sub}</span>
+      </div>`);
+    html+=`</div>`;
+  } else if(step.type==='pct'){
+    html+=`<div class="pct-grid">`;
+    step.opts.forEach(o=>html+=`
+      <div class="pct-btn ${currentAnswers[step.key]===o.val?'selected':''}" onclick="selectAns('${step.key}',${o.val},this)">
+        <div class="pct-num">${o.label}</div>
+        <div class="pct-lbl">${o.sub}</div>
+      </div>`);
+    html+=`</div>`;
+  }
+
+  html+=`<div class="wiz-nav">
+    <button class="btn-wiz-back" onclick="wizBack()">${wizStep===0?'← Dashboard':'← Back'}</button>
+    <span class="step-counter">${wizStep+1} / ${STEPS.length}</span>
+    <button class="btn-wiz-next ${currentAnswers[step.key]!==undefined?'ready':''}" id="btn-wiz-next" onclick="wizNext()">
+      ${wizStep===STEPS.length-1?'Analyze →':'Next →'}
+    </button>
+  </div>`;
+
+  cont.innerHTML=html;
+}
+
+function selectAns(key,val,el){
+  currentAnswers[key]=val;
+  el.closest('.goal-grid,.ctx-grid,.emoji-grid,.pct-grid').querySelectorAll('.goal-tile,.ctx-tile,.em-btn,.pct-btn').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('btn-wiz-next')?.classList.add('ready');
+}
+
+function wizNext(){
+  if(currentAnswers[STEPS[wizStep].key]===undefined)return;
+  if(wizStep<STEPS.length-1){wizStep++;renderWizardStep();}
+  else submitWizard();
+}
+function wizBack(){
+  if(wizStep===0){showScreen('dashboard');renderDashboard();return;}
+  wizStep--;renderWizardStep();
+}
+
+function applyPreset(type){
+  const presets={
+    interview:{time_pressure:7,stress_level:7,confidence_level:6,experience_level:4,info_completeness:60,num_alternatives:2,context:'professional',goal:'Career'},
+    exam:{time_pressure:8,stress_level:8,confidence_level:5,experience_level:3,info_completeness:55,num_alternatives:2,context:'academic',goal:'Academic'},
+    investment:{time_pressure:5,stress_level:4,confidence_level:6,experience_level:4,info_completeness:65,num_alternatives:3,context:'professional',goal:'Financial'},
+    relationship:{time_pressure:4,stress_level:6,confidence_level:5,experience_level:3,info_completeness:50,num_alternatives:2,context:'personal',goal:'Personal'}
+  };
+  const p=presets[type];if(!p)return;
+  Object.assign(currentAnswers,p);
+  wizStep=STEPS.length-1;renderWizardStep();
+  showToast('Preset applied! Review and click Analyze.');
+}
+
+// ═══════════════════════════════════════
+// SUBMIT & COMPUTE
+// ═══════════════════════════════════════
+async function submitWizard(){
+  showScreen('loading');
+  const payload={
+    time_pressure:currentAnswers.time_pressure||5,
+    stress_level:currentAnswers.stress_level||5,
+    confidence_level:currentAnswers.confidence_level||5,
+    experience_level:currentAnswers.experience_level||5,
+    info_completeness:currentAnswers.info_completeness||60,
+    num_alternatives:currentAnswers.num_alternatives||3,
+    decision_context:currentAnswers.context||'personal'
+  };
+  try{
+    const res=await fetch(API+'/predict',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    currentResult=await res.json();
+  }catch(e){
+    currentResult=computeLocal(payload);
+  }
+  setTimeout(()=>{renderResult(currentResult,payload);showScreen('result');},1800);
+}
+
+function computeLocal(p){
+  const risk_score=+(p.time_pressure*0.22+p.stress_level*0.20+(10-p.confidence_level)*0.18+(10-p.experience_level)*0.18+(100-p.info_completeness)/10*0.14+(8-p.num_alternatives)/7*0.08).toFixed(2);
+  const label=risk_score<3.5?'Low':risk_score<6.5?'Medium':'High';
+  const sp=+Math.max(0.05,Math.min(0.98,1-risk_score/10-0.04)).toFixed(3);
+  const raw={time_pressure:p.time_pressure/10*0.22,stress_level:p.stress_level/10*0.20,confidence_level:(10-p.confidence_level)/10*0.18,experience_level:(10-p.experience_level)/10*0.18,info_completeness:(100-p.info_completeness)/100*0.14,num_alternatives:(8-p.num_alternatives)/7*0.08};
+  const tot=Object.values(raw).reduce((s,v)=>s+Math.max(v,0),0)||1;
+  const fc=Object.fromEntries(Object.entries(raw).map(([k,v])=>[k,+(Math.max(v,0)/tot).toFixed(4)]));
+  const biases=BIASES.filter(b=>b.test(p)).map(b=>({name:b.name,emoji:b.emoji,explanation:b.exp}));
+  const factorAnalysis=Object.entries(THRESHOLDS).map(([feat,t])=>{
+    const val=p[feat];
+    const isRisk=['time_pressure','stress_level'].includes(feat)?val>t.hi:val<t.lo;
+    const isSafe=['time_pressure','stress_level'].includes(feat)?val<=t.lo:val>=t.hi;
+    return{feature:feat,label:t.label,value:val,contribution:+(fc[feat]*100).toFixed(1),status:isRisk?'danger':isSafe?'safe':'neutral',message:isRisk?t.hiMsg:t.loMsg,advice:isRisk?t.advice:null};
+  });
+  const sorted=[...factorAnalysis].sort((a,b)=>b.contribution-a.contribution);
+  const top=sorted[0];
+  const verdict=label==='High'?`High-risk decision. Primary driver: ${top.label} (${top.contribution}% of risk). Multiple risk factors active simultaneously.`:label==='Medium'?`Moderate risk. Your ${top.label} is the main concern. Targeted improvements can shift this to safe territory.`:`Decision conditions are healthy. Proceed with confidence.`;
+  return{risk_label:label,risk_score,success_probability:sp,feature_contributions:fc,explanation:{verdict,factor_analysis:factorAnalysis,detected_biases:biases,action_plan:factorAnalysis.filter(f=>f.advice).slice(0,3).map(f=>f.advice)}};
+}
+
+function computeScorecard(risk_score, success_prob){
+  const quality = Math.round((1 - risk_score / 10) * 100);
+  const grade = quality >= 75 ? 'A'
+              : quality >= 60 ? 'B'
+              : quality >= 45 ? 'C'
+              : quality >= 30 ? 'D' : 'F';
+  const desc = grade === 'A' ? 'Excellent conditions'
+             : grade === 'B' ? 'Strong conditions'
+             : grade === 'C' ? 'Needs improvement'
+             : grade === 'D' ? 'High risk' : 'Poor conditions';
+  return { quality, grade, desc };
+}
+
+// ═══════════════════════════════════════
+// RENDER RESULT
+// ═══════════════════════════════════════
+function renderResult(r, inputs){
+  const label=r.risk_label;
+  const pool=PERSONAS[label];
+  const idx=Math.floor(Math.random()*pool.names.length);
+  const persona=pool.names[idx],emoji=pool.emojis[idx],desc=pool.descs[idx];
+  const sc=computeScorecard(r.risk_score,r.success_probability);
+  const goal=currentAnswers.goal||'Personal';
+  const goalMsg=(GOAL_RULES[goal]||GOAL_RULES.Personal)[label];
+  const goalLevel=label==='High'?'danger':label==='Medium'?'warn':'ok';
+
+  // Save history
+  const entry={risk_label:label,risk_score:r.risk_score,inputs,context:currentAnswers.context||'personal',goal,persona,ts:'Just now'};
+  sessionHistory.push(entry);saveHistory();
+
+  const el=document.getElementById('result-inner');
+  el.innerHTML=`
+    <!-- Persona -->
+    <div class="persona-banner ${label}">
+      <span class="pb-emoji">${emoji}</span>
+      <div class="pb-type ${label}">Your decision persona</div>
+      <div class="pb-name">${persona}</div>
+      <div class="pb-desc">${desc}</div>
+      <div class="score-badge">
+        <div class="sb-ring">
+          <canvas id="score-ring-canvas" width="100" height="100"></canvas>
+          <div class="sb-num">
+            <div class="sb-main ${label}" id="anim-score">0</div>
+            <div class="sb-denom">/ 10</div>
+          </div>
+        </div>
+        <div class="sb-label">Risk Score</div>
+      </div>
+    </div>
+
+    <!-- Scorecard -->
+    <div class="scorecard r-card">
+      <div class="sc-doughnut"><canvas id="doughnut-canvas"></canvas></div>
+      <div class="sc-info">
+        <div class="sc-grade ${sc.grade}">${sc.grade}</div>
+        <div class="sc-quality">Decision Quality: <span>${sc.quality}%</span> — ${sc.desc}</div>
+        <div class="sc-quality" style="margin-top:4px">Success probability: <span>${Math.round((1 - r.risk_score/10)*100)}%</span></div>        <div class="sc-bar-wrap">
+        <div class="sc-bar-fill" id="sc-bar" style="width:0%;background:${sc.grade==='A'?'var(--green)':sc.grade==='B'?'#6ee7b7':sc.grade==='C'?'var(--amber)':sc.grade==='D'?'#f97316':'var(--red)'}"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Risk Gauge -->
+    <div class="r-card">
+      <div class="r-hd">
+        <div class="r-title"><span class="ri">📊</span>Risk Gauge</div>
+        <span style="font-size:13px;color:${label==='Low'?'var(--green)':label==='Medium'?'var(--amber)':'var(--red)'};font-weight:600">${label} Risk</span>
+      </div>
+      <div class="gauge-track">
+        <div class="gauge-needle" id="gauge-needle" style="left:0%"></div>
+      </div>
+      <div class="gauge-labels"><span>0 — Low</span><span>5 — Medium</span><span>10 — High</span></div>
+      <div class="gauge-info">Score: <span>${r.risk_score}/10</span> · Success probability: <span>${(r.success_probability*100).toFixed(0)}%</span></div>
+    </div>
+
+    <!-- Goal Indicator -->
+    <div class="r-card">
+      <div class="r-hd"><div class="r-title"><span class="ri">🎖️</span>Goal-Support Indicator — ${goal} Decision</div></div>
+      <div class="goal-result ${goalLevel}">${goalMsg}</div>
+    </div>
+
+    <!-- Factor Breakdown -->
+    <div class="r-card">
+      <div class="r-hd"><div class="r-title"><span class="ri">📊</span>Factor Breakdown — What's Driving Your Risk</div></div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:18px;line-height:1.7">${r.explanation.verdict}</p>
+      <div id="factor-bars"></div>
+    </div>
+
+    <!-- Cognitive Bias Detector -->
+    <div class="r-card">
+      <div class="r-hd"><div class="r-title"><span class="ri">🧠</span>Cognitive Bias Detector</div></div>
+      <div id="bias-content"></div>
+    </div>
+
+    <!-- What-If Simulator -->
+    <div class="r-card">
+      <div class="r-hd"><div class="r-title"><span class="ri">🔬</span>What-If Simulator</div></div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:18px">Adjust any condition — watch your risk score update live</p>
+      <div class="sim-sliders" id="sim-sliders"></div>
+      <div class="sim-result">
+        <div>
+          <div class="sr-label">Before</div>
+          <div class="sr-score ${label}">${r.risk_score}</div>
+        </div>
+        <div class="sr-arrow">→</div>
+        <div>
+          <div class="sr-label">After</div>
+          <div class="sr-score" id="sim-score">${r.risk_score}</div>
+          <div class="sr-delta" id="sim-delta">No change</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Action Plan -->
+    <div class="r-card">
+      <div class="r-hd"><div class="r-title"><span class="ri">⚡</span>Action Plan</div></div>
+      <div id="action-list"></div>
+    </div>
+
+    <!-- Archetype Comparison -->
+    <div class="r-card">
+      <div class="r-hd"><div class="r-title"><span class="ri">👤</span>How You Compare</div></div>
+      <div class="arch-grid" id="arch-grid"></div>
+    </div>
+
+    <!-- Bottom buttons -->
+    <div class="result-btns">
+      <button class="btn-r-primary" onclick="startWizard()">+ Analyze another decision</button>
+      <button class="btn-r-ghost" onclick="showScreen('dashboard');renderDashboard()">← Dashboard</button>
+    </div>`;
+
+  // Animate
+  setTimeout(()=>{
+    animNum('anim-score',0,r.risk_score,1400,v=>v.toFixed(1));
+    setTimeout(()=>{ document.getElementById('gauge-needle').style.left=(r.risk_score/10*100)+'%'; },500);
+    document.getElementById('sc-bar').style.width=sc.quality+'%';
+    drawScoreRing(r.risk_score,label);
+    renderDoughnut(sc.quality,sc.grade);
+    renderFactorBars(r.explanation.factor_analysis);
+    renderBiases(r.explanation.detected_biases);
+    renderSimulator(inputs,r.risk_score,label);
+    renderActions(r.explanation.action_plan);
+    renderArchetypes(r.risk_score,label);
+  },200);
+}
+
+function drawScoreRing(score,label){
+  const c=document.getElementById('score-ring-canvas');if(!c)return;
+  const ctx=c.getContext('2d');const cx=50,cy=50,r=40;
+  const color=label==='Low'?'#00e57a':label==='Medium'?'#ffb020':'#ff3d5a';
+  ctx.clearRect(0,0,100,100);
+  ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.strokeStyle='rgba(255,255,255,0.06)';ctx.lineWidth=6;ctx.stroke();
+  const end=-Math.PI/2+(score/10)*Math.PI*2;
+  ctx.beginPath();ctx.arc(cx,cy,r,-Math.PI/2,end);ctx.strokeStyle=color;ctx.lineWidth=6;ctx.lineCap='round';ctx.stroke();
+}
+
+function renderDoughnut(quality,grade){
+  const c=document.getElementById('doughnut-canvas');if(!c)return;
+  if(doughnutChart){doughnutChart.destroy();doughnutChart=null}
+  const color=grade==='A'?'#00e57a':grade==='B'?'#6ee7b7':grade==='C'?'#ffb020':grade==='D'?'#f97316':'#ff3d5a';
+  doughnutChart=new Chart(c.getContext('2d'),{
+    type:'doughnut',
+    data:{datasets:[{data:[quality,100-quality],backgroundColor:[color,'rgba(255,255,255,0.05)'],borderWidth:0}]},
+    options:{responsive:false,cutout:'75%',plugins:{legend:{display:false},tooltip:{enabled:false}}}
+  });
+}
+
+function renderFactorBars(factors){
+  const sorted=[...factors].sort((a,b)=>b.contribution-a.contribution);
+  document.getElementById('factor-bars').innerHTML=sorted.map(f=>`
+    <div class="factor-row">
+      <div class="fr-head">
+        <span class="fr-label">${f.label}</span>
+        <span class="fr-badge ${f.status}">${f.status==='danger'?'⚠ Risk':f.status==='safe'?'✓ Safe':'— Neutral'}</span>
+      </div>
+      <div class="fr-track"><div class="fr-fill ${f.status}" data-w="${Math.min(f.contribution*3.5,100)}" style="width:0%"></div></div>
+      <div class="fr-msg">${f.message}${f.advice?` <em style="color:var(--cyan)">${f.advice}</em>`:''}</div>
+    </div>`).join('');
+  setTimeout(()=>document.querySelectorAll('.fr-fill').forEach(el=>el.style.width=el.dataset.w+'%'),300);
+}
+
+function renderBiases(biases){
+  const el=document.getElementById('bias-content');
+  if(!biases||!biases.length){
+    el.innerHTML=`<div class="no-bias">✅ No cognitive biases detected in your current conditions.</div>`;return;
+  }
+  el.innerHTML=biases.map((b,i)=>`
+    <div class="bias-pill" id="bp-${i}">
+      <span class="bp-icon">${b.emoji}</span>
+      <div><div class="bp-name">${b.name}</div><div class="bp-text">${b.explanation}</div></div>
+    </div>`).join('');
+  biases.forEach((_,i)=>setTimeout(()=>document.getElementById('bp-'+i)?.classList.add('visible'),400+i*180));
+}
+
+function renderSimulator(inputs,origScore,origLabel){
+  const simFields=[
+    {key:'stress_level',label:'Stress Level',min:1,max:10,step:1},
+    {key:'time_pressure',label:'Time Pressure',min:1,max:10,step:1},
+    {key:'confidence_level',label:'Confidence',min:1,max:10,step:1},
+    {key:'experience_level',label:'Experience',min:1,max:10,step:1},
+    {key:'info_completeness',label:'Information %',min:10,max:100,step:5},
+    {key:'num_alternatives',label:'Alternatives',min:1,max:7,step:1}
+  ];
+  const sliders=document.getElementById('sim-sliders');
+  sliders.innerHTML=simFields.map(f=>`
+    <div class="sim-row">
+      <span class="sim-label">${f.label}</span>
+      <input class="sim-slider" type="range" min="${f.min}" max="${f.max}" step="${f.step}"
+        value="${inputs[f.key]||5}" oninput="updateSim(this,'${f.key}',${origScore})"
+        id="sl-${f.key}">
+      <span class="sim-val" id="sv-${f.key}">${inputs[f.key]||5}</span>
+    </div>`).join('');
+}
+
+function updateSim(el,key,origScore){
+  document.getElementById('sv-'+key).textContent=el.value;
+  const simInputs={};
+  ['stress_level','time_pressure','confidence_level','experience_level','info_completeness','num_alternatives'].forEach(k=>{
+    const sl=document.getElementById('sl-'+k);
+    if(sl)simInputs[k]=+sl.value;
+  });
+  const newScore=+(simInputs.time_pressure*0.22+simInputs.stress_level*0.20+(10-simInputs.confidence_level)*0.18+(10-simInputs.experience_level)*0.18+(100-simInputs.info_completeness)/10*0.14+(8-simInputs.num_alternatives)/7*0.08).toFixed(2);
+  const newLabel=newScore<3.5?'Low':newScore<6.5?'Medium':'High';
+  const delta=+(origScore-newScore).toFixed(2);
+  const scoreEl=document.getElementById('sim-score');
+  const deltaEl=document.getElementById('sim-delta');
+  scoreEl.textContent=newScore;
+  scoreEl.className='sr-score '+newLabel;
+  if(Math.abs(delta)<0.1){deltaEl.textContent='No change';deltaEl.className='sr-delta same';}
+  else if(delta>0){deltaEl.textContent=`↓ ${delta} points better`;deltaEl.className='sr-delta better';}
+  else{deltaEl.textContent=`↑ ${Math.abs(delta)} points worse`;deltaEl.className='sr-delta worse';}
+}
+
+function renderActions(actions){
+  const el=document.getElementById('action-list');
+  if(!actions||!actions.length){el.innerHTML=`<p style="font-size:13px;color:var(--muted)">Your conditions are solid — no urgent actions needed.</p>`;return;}
+  el.innerHTML=actions.map((a,i)=>`<div class="action-item"><div class="act-num">${i+1}</div><div class="act-text">${a}</div></div>`).join('');
+}
+
+function renderArchetypes(userScore,userLabel){
+  const grid=document.getElementById('arch-grid');if(!grid)return;
+  const uc={Low:'var(--green)',Medium:'var(--amber)',High:'var(--red)'}[userLabel];
+  let html=`<div class="arch-card you">
+    <div class="ac-emoji">👤</div>
+    <div class="ac-name">You</div>
+    <div class="ac-score ${userLabel}">${userScore}</div>
+    <div class="ac-bar"><div class="ac-bar-fill" data-w="${userScore/10*100}" style="width:0;background:${uc}"></div></div>
+  </div>`;
+  Object.values(ARCHETYPES_DATA).forEach(a=>{
+    const ac={Low:'var(--green)',Medium:'var(--amber)',High:'var(--red)'}[a.risk_label];
+    const delta=+(userScore-a.risk_score).toFixed(1);
+    const dc=delta>0.3?'worse':delta<-0.3?'better':'same';
+    const dt=delta>0.3?`▲ ${delta} riskier`:delta<-0.3?`▼ ${Math.abs(delta)} safer`:'≈ Similar';
+    html+=`<div class="arch-card">
+      <div class="ac-emoji">${a.emoji}</div>
+      <div class="ac-name">${a.label}</div>
+      <div class="ac-score ${a.risk_label}">${a.risk_score}</div>
+      <div class="ac-delta ${dc}">${dt}</div>
+      <div class="ac-bar"><div class="ac-bar-fill" data-w="${a.risk_score/10*100}" style="width:0;background:${ac}"></div></div>
+    </div>`;
+  });
+  grid.innerHTML=html;
+  setTimeout(()=>grid.querySelectorAll('.ac-bar-fill').forEach(el=>{el.style.transition='width 1s ease';el.style.width=el.dataset.w+'%';}),400);
+}
+
+// ═══════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════
+function animNum(id,from,to,dur,fmt){
+  const el=document.getElementById(id);if(!el)return;
+  const s=performance.now();
+  (function step(now){
+    const p=Math.min((now-s)/dur,1);
+    const e=1-Math.pow(1-p,3);
+    el.textContent=fmt(from+(to-from)*e);
+    if(p<1)requestAnimationFrame(step);
+  })(performance.now());
+}
+function showToast(msg){
+  const t=document.createElement('div');t.className='toast';t.textContent=msg;
+  document.body.appendChild(t);setTimeout(()=>t.remove(),2500);
+}
+</script>
+</body>
+</html>

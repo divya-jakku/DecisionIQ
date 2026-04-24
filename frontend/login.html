@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DecisionIQ — Sign In</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#07090f;--bg2:#0c1121;--bg3:#111a2e;--cyan:#00d4ff;--violet:#7c3aed;--cyan2:#0066ff;--green:#00e57a;--amber:#ffb020;--red:#ff3d5a;--text:#e8f0ff;--muted:#4a5a7a;--border:rgba(0,212,255,0.1)}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);overflow:hidden}
+#cursor{position:fixed;width:10px;height:10px;background:var(--cyan);border-radius:50%;pointer-events:none;z-index:9999;mix-blend-mode:screen}
+#cursor-ring{position:fixed;width:36px;height:36px;border:1px solid rgba(0,212,255,0.4);border-radius:50%;pointer-events:none;z-index:9998;transition:all .15s ease}
+#cursor-ring.hover{width:52px;height:52px;border-color:rgba(0,212,255,0.8);background:rgba(0,212,255,0.05)}
+canvas{position:fixed;inset:0;z-index:0}
+.mesh{position:fixed;inset:0;z-index:1;pointer-events:none;background:radial-gradient(ellipse 70% 60% at 80% 50%,rgba(124,58,237,.14),transparent),radial-gradient(ellipse 50% 60% at 10% 30%,rgba(0,212,255,.07),transparent)}
+.page{position:relative;z-index:2;display:grid;grid-template-columns:1fr 1fr;height:100vh}
+/* LEFT */
+.left-panel{display:flex;flex-direction:column;justify-content:space-between;padding:44px 56px;border-right:1px solid var(--border);position:relative;overflow:hidden}
+.left-panel::before{content:'';position:absolute;bottom:-100px;left:-100px;width:400px;height:400px;border-radius:50%;background:radial-gradient(circle,rgba(0,212,255,.06),transparent 70%);pointer-events:none}
+.logo{font-family:'Syne',sans-serif;font-weight:800;font-size:26px;background:linear-gradient(135deg,var(--cyan),var(--violet));-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-decoration:none;letter-spacing:-.5px}
+.left-mid{flex:1;display:flex;flex-direction:column;justify-content:center;padding:40px 0}
+.left-eye{font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--cyan);margin-bottom:20px}
+.left-title{font-family:'Syne',sans-serif;font-size:clamp(36px,4vw,50px);font-weight:800;line-height:1.05;letter-spacing:-1.5px;margin-bottom:24px}
+.left-sub{font-size:15px;color:var(--muted);line-height:1.8;max-width:340px;margin-bottom:40px}
+.stat-pills{display:flex;flex-direction:column;gap:14px}
+.spill{display:flex;align-items:center;gap:14px;background:rgba(12,17,33,.8);border:1px solid var(--border);border-radius:14px;padding:14px 18px;backdrop-filter:blur(10px);animation:pillIn .6s ease both}
+.spill:nth-child(1){animation-delay:.3s}.spill:nth-child(2){animation-delay:.5s}.spill:nth-child(3){animation-delay:.7s}
+@keyframes pillIn{from{opacity:0;transform:translateX(-20px)}to{opacity:1;transform:none}}
+.sp-icon{width:38px;height:38px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px;background:linear-gradient(135deg,rgba(0,212,255,.1),rgba(124,58,237,.1));border:1px solid rgba(0,212,255,.15)}
+.sp-text{font-size:13px;color:var(--text);font-weight:500}
+.sp-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.left-foot{font-size:12px;color:var(--muted)}
+.left-foot a{color:var(--cyan);text-decoration:none}
+/* RIGHT */
+.right-panel{display:flex;align-items:center;justify-content:center;padding:44px 56px}
+.login-card{width:100%;max-width:420px;animation:cardIn .7s .2s cubic-bezier(.34,1.56,.64,1) both}
+@keyframes cardIn{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
+.card-title{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;letter-spacing:-.5px;margin-bottom:8px}
+.card-sub{font-size:14px;color:var(--muted);margin-bottom:32px;line-height:1.6}
+.demo-tabs{display:flex;gap:8px;margin-bottom:28px}
+.demo-tab{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:12px;cursor:pointer;transition:all .25s;text-align:center}
+.demo-tab:hover{border-color:rgba(0,212,255,.3)}
+.demo-tab.active{border-color:var(--cyan);background:rgba(0,212,255,.06)}
+.dt-avatar{font-size:22px;margin-bottom:4px}
+.dt-name{font-size:13px;font-weight:600}
+.dt-role{font-size:10px;color:var(--muted)}
+.divider{display:flex;align-items:center;gap:12px;margin:20px 0;font-size:11px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border)}
+.field-wrap{margin-bottom:18px}
+.field-label{display:block;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.field-input{width:100%;padding:14px 18px;background:var(--bg3);border:1px solid var(--border);border-radius:12px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text);outline:none;transition:all .25s}
+.field-input::placeholder{color:var(--muted)}
+.field-input:focus{border-color:rgba(0,212,255,.4);box-shadow:0 0 0 3px rgba(0,212,255,.08);background:rgba(17,26,46,.8)}
+.btn-login-main{width:100%;padding:16px;background:linear-gradient(135deg,var(--cyan),var(--cyan2));color:#000;font-family:'Syne',sans-serif;font-weight:700;font-size:16px;border:none;border-radius:12px;cursor:pointer;transition:all .3s;letter-spacing:.03em;margin-top:4px;box-shadow:0 0 30px rgba(0,212,255,.25)}
+.btn-login-main:hover{transform:translateY(-2px);box-shadow:0 6px 40px rgba(0,212,255,.45)}
+.login-note{text-align:center;font-size:12px;color:var(--muted);margin-top:20px;line-height:1.6}
+.login-note a{color:var(--cyan);text-decoration:none}
+.error-msg{background:rgba(255,61,90,.1);border:1px solid rgba(255,61,90,.3);color:var(--red);border-radius:10px;padding:10px 14px;font-size:13px;margin-bottom:14px;display:none}
+@keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
+.shake{animation:shake .4s ease}
+@media(max-width:768px){
+  #cursor,#cursor-ring{display:none}
+  .page{grid-template-columns:1fr}.left-panel{display:none}.right-panel{padding:32px 24px}body{overflow:auto}
+}
+</style>
+</head>
+<body>
+<div id="cursor"></div>
+<div id="cursor-ring"></div>
+<canvas id="bg-canvas"></canvas>
+<div class="mesh"></div>
+<div class="page">
+  <!-- LEFT -->
+  <div class="left-panel">
+    <a href="home.html" class="logo">DecisionIQ</a>
+    <div class="left-mid">
+      <div class="left-eye">AI Decision Intelligence</div>
+      <h2 class="left-title">Decisions are only as good as the state you're in.</h2>
+      <p class="left-sub">DecisionIQ measures your conditions — stress, experience, information — and tells you exactly how risky your decision is before you commit.</p>
+      <div class="stat-pills">
+        <div class="spill"><div class="sp-icon">🎯</div><div><div class="sp-text">84% Model Accuracy</div><div class="sp-sub">Random Forest on 1,200 scenarios</div></div></div>
+        <div class="spill"><div class="sp-icon">🧠</div><div><div class="sp-text">5 Cognitive Biases Detected</div><div class="sp-sub">Named badges that unlock on analysis</div></div></div>
+        <div class="spill"><div class="sp-icon">🔬</div><div><div class="sp-text">Live What-If Simulation</div><div class="sp-sub">Change a condition, watch risk drop</div></div></div>
+      </div>
+    </div>
+    <div class="left-foot">© 2025 DecisionIQ · <a href="home.html">Back to home</a></div>
+  </div>
+  <!-- RIGHT -->
+  <div class="right-panel">
+    <div class="login-card">
+      <div class="card-title">Welcome back.</div>
+      <div class="card-sub">Sign in or try a demo profile to get started instantly.</div>
+      <div class="demo-tabs">
+        <div class="demo-tab" id="tab-priya" onclick="quickLogin('Priya',this)"><div class="dt-avatar">👩</div><div class="dt-name">Priya</div><div class="dt-role">Student · Demo</div></div>
+        <div class="demo-tab" id="tab-arjun" onclick="quickLogin('Arjun',this)"><div class="dt-avatar">👨</div><div class="dt-name">Arjun</div><div class="dt-role">Professional · Demo</div></div>
+        <div class="demo-tab" id="tab-maya" onclick="quickLogin('Maya',this)"><div class="dt-avatar">👩‍💻</div><div class="dt-name">Maya</div><div class="dt-role">Researcher · Demo</div></div>
+      </div>
+      <div class="divider">or sign in manually</div>
+      <div class="error-msg" id="error-msg">Please enter a username and password.</div>
+      <div class="field-wrap">
+        <label class="field-label">Username</label>
+        <input class="field-input" id="inp-user" type="text" placeholder="Enter your name" autocomplete="off">
+      </div>
+      <div class="field-wrap">
+        <label class="field-label">Password</label>
+        <input class="field-input" id="inp-pass" type="password" placeholder="Any password works" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <button class="btn-login-main" id="login-btn" onclick="doLogin()">⚡ Sign In & Analyze</button>
+      <div class="login-note">Any username + password works — this is a demo.<br><a href="home.html">← Back to home</a></div>
+    </div>
+  </div>
+</div>
+<script>
+const cur=document.getElementById('cursor'),ring=document.getElementById('cursor-ring');
+let mx=0,my=0,rx=0,ry=0;
+document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;cur.style.left=(mx-5)+'px';cur.style.top=(my-5)+'px'});
+document.querySelectorAll('a,button,.demo-tab,.field-input').forEach(el=>{
+  el.addEventListener('mouseenter',()=>ring.classList.add('hover'));
+  el.addEventListener('mouseleave',()=>ring.classList.remove('hover'));
+});
+function animRing(){rx+=(mx-rx)*.12;ry+=(my-ry)*.12;ring.style.left=(rx-18)+'px';ring.style.top=(ry-18)+'px';requestAnimationFrame(animRing)}animRing();
+// Particles
+const canvas=document.getElementById('bg-canvas'),ctx=canvas.getContext('2d');
+let W,H,pts=[];
+function resize(){W=canvas.width=innerWidth;H=canvas.height=innerHeight}
+resize();window.addEventListener('resize',resize);
+for(let i=0;i<60;i++)pts.push({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.35,vy:(Math.random()-.5)*.35,r:Math.random()*1.5+.5,a:Math.random()*.4+.1,col:Math.random()>.5?'0,212,255':'124,58,237'});
+let mX=W/2,mY=H/2;
+window.addEventListener('mousemove',e=>{mX=e.clientX;mY=e.clientY});
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  for(let i=0;i<pts.length;i++)for(let j=i+1;j<pts.length;j++){
+    const d=Math.hypot(pts[i].x-pts[j].x,pts[i].y-pts[j].y);
+    if(d<100){ctx.beginPath();ctx.strokeStyle=`rgba(0,212,255,${.06*(1-d/100)})`;ctx.lineWidth=.5;ctx.moveTo(pts[i].x,pts[i].y);ctx.lineTo(pts[j].x,pts[j].y);ctx.stroke()}
+  }
+  pts.forEach(p=>{
+    p.x+=p.vx;p.y+=p.vy;
+    if(p.x<0||p.x>W)p.vx*=-1;if(p.y<0||p.y>H)p.vy*=-1;
+    ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=`rgba(${p.col},${p.a})`;ctx.fill();
+  });requestAnimationFrame(draw);
+}draw();
+function quickLogin(name,tabEl){
+  document.querySelectorAll('.demo-tab').forEach(t=>t.classList.remove('active'));
+  tabEl.classList.add('active');
+  document.getElementById('inp-user').value=name;
+  document.getElementById('inp-pass').value='demo';
+}
+function doLogin(){
+  const user=document.getElementById('inp-user').value.trim();
+  const pass=document.getElementById('inp-pass').value;
+  const errEl=document.getElementById('error-msg');
+  if(!user||!pass){
+    errEl.style.display='block';
+    document.querySelector('.login-card').classList.add('shake');
+    setTimeout(()=>document.querySelector('.login-card').classList.remove('shake'),400);
+    return;
+  }
+  errEl.style.display='none';
+  const btn=document.getElementById('login-btn');
+  btn.textContent='Signing in…';btn.style.opacity='.7';btn.style.pointerEvents='none';
+  sessionStorage.setItem('diq_user',user);
+  setTimeout(()=>window.location.href='app.html',800);
+}
+</script>
+</body>
+</html>

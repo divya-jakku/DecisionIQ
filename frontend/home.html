@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DecisionIQ — Know Before You Leap</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#07090f;--bg2:#0c1121;--bg3:#111a2e;
+  --cyan:#00d4ff;--violet:#7c3aed;--cyan2:#0066ff;
+  --green:#00e57a;--amber:#ffb020;--red:#ff3d5a;
+  --text:#e8f0ff;--muted:#4a5a7a;--border:rgba(0,212,255,0.1);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden;cursor:none}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:linear-gradient(var(--cyan),var(--violet));border-radius:2px}
+
+#cursor{position:fixed;width:10px;height:10px;background:var(--cyan);border-radius:50%;pointer-events:none;z-index:9999;mix-blend-mode:screen}
+#cursor-ring{position:fixed;width:36px;height:36px;border:1px solid rgba(0,212,255,0.4);border-radius:50%;pointer-events:none;z-index:9998;transition:all .15s ease}
+#cursor-ring.hover{width:52px;height:52px;border-color:rgba(0,212,255,0.8);background:rgba(0,212,255,0.05)}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:22px 64px;transition:all .4s}
+nav.scrolled{background:rgba(7,9,15,0.92);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:14px 64px;box-shadow:0 4px 40px rgba(0,0,0,0.6)}
+.nav-logo{font-family:'Syne',sans-serif;font-weight:800;font-size:24px;background:linear-gradient(135deg,var(--cyan),var(--violet));-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-.5px;text-decoration:none}
+.nav-links{display:flex;align-items:center;gap:40px;list-style:none}
+.nav-links a{color:var(--muted);text-decoration:none;font-size:14px;font-weight:500;transition:color .2s}
+.nav-links a:hover{color:var(--text)}
+.btn-nav-login{background:transparent;border:1px solid rgba(0,212,255,0.35);color:var(--cyan);padding:10px 28px;border-radius:50px;font-size:14px;font-weight:600;text-decoration:none;transition:all .3s;letter-spacing:.05em}
+.btn-nav-login:hover{background:rgba(0,212,255,0.08);border-color:var(--cyan);box-shadow:0 0 20px rgba(0,212,255,0.2);transform:translateY(-1px)}
+
+/* HERO */
+#hero{position:relative;min-height:100vh;display:flex;align-items:center;justify-content:center;overflow:hidden}
+#hero-canvas{position:absolute;inset:0;z-index:0}
+.hero-mesh{position:absolute;inset:0;z-index:1;background:radial-gradient(ellipse 80% 60% at 50% 40%,rgba(124,58,237,.12),transparent),radial-gradient(ellipse 60% 40% at 20% 70%,rgba(0,212,255,.08),transparent);pointer-events:none}
+.hero-content{position:relative;z-index:2;text-align:center;max-width:880px;padding:0 24px}
+.hero-chip{display:inline-flex;align-items:center;gap:10px;background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.3);color:#c4b5fd;padding:8px 20px;border-radius:50px;font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;margin-bottom:36px;animation:fadeSlide 1s ease both}
+.chip-pulse{width:7px;height:7px;border-radius:50%;background:var(--violet);box-shadow:0 0 10px var(--violet);animation:blink 2s ease infinite}
+@keyframes blink{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
+.hero-title{font-family:'Syne',sans-serif;font-size:clamp(48px,8vw,88px);font-weight:800;line-height:1;letter-spacing:-3px;margin-bottom:28px;animation:fadeSlide 1s .15s ease both}
+.hero-title .grad{background:linear-gradient(135deg,var(--cyan) 0%,var(--violet) 50%,#e879f9 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero-sub{font-size:18px;color:var(--muted);line-height:1.8;max-width:540px;margin:0 auto 48px;animation:fadeSlide 1s .3s ease both}
+.hero-btns{display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap;animation:fadeSlide 1s .45s ease both}
+.btn-hero-primary{display:inline-flex;align-items:center;gap:10px;background:linear-gradient(135deg,var(--cyan),var(--cyan2));color:#000;font-weight:700;font-size:16px;padding:18px 40px;border-radius:50px;text-decoration:none;transition:all .3s;box-shadow:0 0 40px rgba(0,212,255,.35);letter-spacing:.02em}
+.btn-hero-primary:hover{transform:translateY(-3px);box-shadow:0 8px 50px rgba(0,212,255,.55)}
+.btn-hero-ghost{display:inline-flex;align-items:center;gap:10px;background:transparent;border:1px solid rgba(255,255,255,.12);color:var(--text);font-size:16px;font-weight:500;padding:18px 40px;border-radius:50px;text-decoration:none;transition:all .3s}
+.btn-hero-ghost:hover{border-color:rgba(0,212,255,.3);color:var(--cyan);background:rgba(0,212,255,.04)}
+
+/* Floating cards */
+.hero-float{position:absolute;z-index:2;animation:hFloat 6s ease-in-out infinite}
+.hero-float.f1{top:20%;left:4%;animation-delay:0s}
+.hero-float.f2{top:22%;right:3%;animation-delay:1.5s}
+.hero-float.f3{bottom:18%;left:6%;animation-delay:3s}
+.hero-float.f4{bottom:22%;right:5%;animation-delay:2s}
+@keyframes hFloat{0%,100%{transform:translateY(0) rotate(-1deg)}50%{transform:translateY(-14px) rotate(1deg)}}
+.float-card{background:rgba(12,17,33,.88);backdrop-filter:blur(16px);border:1px solid rgba(0,212,255,.12);border-radius:16px;padding:14px 18px;font-size:12px;min-width:148px;box-shadow:0 8px 40px rgba(0,0,0,.5)}
+.fc-lbl{color:var(--muted);margin-bottom:4px;letter-spacing:.05em;text-transform:uppercase;font-size:10px}
+.fc-val{font-family:'Syne',sans-serif;font-weight:700;font-size:20px}
+.fc-val.r{color:var(--red)}.fc-val.g{color:var(--green)}.fc-val.a{color:var(--amber)}
+.fc-pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;margin-top:4px}
+.fc-pill.hr{background:rgba(255,61,90,.15);color:var(--red);border:1px solid rgba(255,61,90,.3)}
+.fc-pill.lr{background:rgba(0,229,122,.12);color:var(--green);border:1px solid rgba(0,229,122,.25)}
+.fc-pill.mr{background:rgba(255,176,32,.12);color:var(--amber);border:1px solid rgba(255,176,32,.25)}
+
+/* Scroll hint */
+.scroll-hint{position:absolute;bottom:32px;left:50%;transform:translateX(-50%);z-index:2;display:flex;flex-direction:column;align-items:center;gap:10px;color:var(--muted);font-size:11px;letter-spacing:.12em;text-transform:uppercase;animation:fadeIn 1.5s 1s ease both}
+.scroll-track{width:1px;height:50px;background:linear-gradient(var(--muted),transparent);position:relative}
+.scroll-ball{width:3px;height:12px;background:var(--cyan);border-radius:2px;position:absolute;top:0;left:50%;transform:translateX(-50%);animation:scrollDrop 1.8s ease infinite}
+@keyframes scrollDrop{0%{top:0;opacity:1}100%{top:38px;opacity:0}}
+
+/* STATS BAR */
+#stats{background:var(--bg2);border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:50px 64px}
+.stats-row{max-width:1000px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr)}
+.stat-item{text-align:center;padding:0 24px;border-right:1px solid rgba(255,255,255,.06)}
+.stat-item:last-child{border-right:none}
+.stat-num{font-family:'Syne',sans-serif;font-size:44px;font-weight:800;line-height:1;background:linear-gradient(135deg,var(--cyan),var(--violet));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.stat-lbl{font-size:13px;color:var(--muted);margin-top:8px;letter-spacing:.04em}
+
+/* SECTIONS */
+section{padding:110px 64px}
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--cyan);margin-bottom:16px}
+.sec-title{font-family:'Syne',sans-serif;font-size:clamp(32px,4vw,52px);font-weight:800;line-height:1.05;letter-spacing:-1.5px;margin-bottom:20px}
+.sec-sub{font-size:17px;color:var(--muted);line-height:1.8;max-width:540px}
+
+/* ABOUT */
+#about{background:var(--bg)}
+.about-grid{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center}
+.live-card{background:var(--bg2);border:1px solid var(--border);border-radius:24px;padding:36px;position:relative;overflow:hidden}
+.live-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--cyan),var(--violet))}
+.live-lbl{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:24px}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:blink 1.5s ease infinite}
+.fb-rows{display:flex;flex-direction:column;gap:14px}
+.fb-row{display:flex;align-items:center;gap:12px}
+.fb-label{font-size:12px;color:var(--muted);width:120px;flex-shrink:0}
+.fb-track{flex:1;height:7px;background:rgba(255,255,255,.05);border-radius:4px;overflow:hidden}
+.fb-fill{height:100%;border-radius:4px;width:0;transition:width 1.5s cubic-bezier(.4,0,.2,1)}
+.fb-fill.c{background:linear-gradient(90deg,var(--cyan),var(--cyan2))}
+.fb-fill.v{background:linear-gradient(90deg,var(--violet),#a855f7)}
+.fb-fill.a{background:linear-gradient(90deg,var(--amber),#f97316)}
+.fb-fill.r{background:linear-gradient(90deg,var(--red),#dc2626)}
+.fb-fill.g{background:linear-gradient(90deg,var(--green),#059669)}
+.fb-val{font-size:12px;font-weight:700;width:32px;text-align:right}
+.risk-summary{margin-top:28px;padding-top:24px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.rs-num{font-family:'Syne',sans-serif;font-size:38px;font-weight:800;color:var(--red);line-height:1}
+.rs-num span{font-size:14px;color:var(--muted);font-family:'DM Sans',sans-serif}
+.rs-badge{background:rgba(255,61,90,.12);border:1px solid rgba(255,61,90,.3);color:var(--red);padding:10px 22px;border-radius:50px;font-weight:700;font-size:13px;letter-spacing:.05em}
+.bias-float{position:absolute;bottom:-14px;right:-14px;background:var(--bg3);border:1px solid rgba(255,176,32,.25);border-radius:16px;padding:12px 16px;display:flex;align-items:center;gap:10px;min-width:180px;animation:hFloat 5s ease-in-out infinite;box-shadow:0 8px 32px rgba(0,0,0,.5)}
+.bf-name{font-size:11px;font-weight:700;color:var(--amber);letter-spacing:.05em}
+.bf-desc{font-size:10px;color:var(--muted)}
+.about-points{margin-top:40px;display:flex;flex-direction:column;gap:20px}
+.ap-row{display:flex;gap:16px;align-items:flex-start}
+.ap-icon{width:42px;height:42px;border-radius:12px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px;background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.15)}
+.ap-text h4{font-size:15px;font-weight:600;margin-bottom:4px}
+.ap-text p{font-size:13px;color:var(--muted);line-height:1.65}
+
+/* HOW IT WORKS */
+#how{background:var(--bg2)}
+.hiw-hdr{text-align:center;max-width:600px;margin:0 auto 64px}
+.hiw-hdr .sec-sub{margin:0 auto}
+.steps-wrap{max-width:1100px;margin:0 auto;position:relative}
+.steps-connector{position:absolute;top:56px;left:12%;right:12%;height:1px;background:linear-gradient(90deg,transparent,var(--cyan),var(--violet),transparent);opacity:.3}
+.steps-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;position:relative;z-index:1}
+.step-card{background:var(--bg3);border:1px solid var(--border);border-radius:24px;padding:32px 24px;text-align:center;transition:all .4s;position:relative;overflow:hidden}
+.step-card::after{content:'';position:absolute;inset:0;background:radial-gradient(circle at 50% 0%,rgba(0,212,255,.05),transparent 60%);opacity:0;transition:opacity .4s}
+.step-card:hover{transform:translateY(-10px);border-color:rgba(0,212,255,.25);box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.step-card:hover::after{opacity:1}
+.step-num{display:inline-flex;align-items:center;justify-content:center;width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--cyan),var(--violet));font-family:'Syne',sans-serif;font-weight:800;font-size:20px;color:#000;margin:0 auto 20px;box-shadow:0 0 24px rgba(0,212,255,.3)}
+.step-icon{font-size:28px;margin-bottom:14px;display:block}
+.step-card h3{font-family:'Syne',sans-serif;font-size:17px;font-weight:700;margin-bottom:10px}
+.step-card p{font-size:13px;color:var(--muted);line-height:1.7}
+
+/* FEATURES */
+#features{background:var(--bg)}
+.feat-hdr{text-align:center;max-width:600px;margin:0 auto 64px}
+.feat-grid{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+.feat-card{background:var(--bg2);border:1px solid var(--border);border-radius:24px;padding:32px;transition:all .4s;position:relative;overflow:hidden}
+.feat-card:hover{transform:translateY(-6px);border-color:rgba(124,58,237,.3);box-shadow:0 20px 60px rgba(0,0,0,.4)}
+.feat-icon{width:54px;height:54px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:26px;background:linear-gradient(135deg,rgba(0,212,255,.1),rgba(124,58,237,.1));border:1px solid rgba(0,212,255,.12);margin-bottom:20px}
+.feat-card h3{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;margin-bottom:10px}
+.feat-card p{font-size:13px;color:var(--muted);line-height:1.7}
+.feat-tag{display:inline-block;margin-top:16px;background:rgba(0,212,255,.08);color:var(--cyan);border:1px solid rgba(0,212,255,.18);padding:4px 14px;border-radius:50px;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+.feat-tag.v{background:rgba(124,58,237,.08);color:#a78bfa;border-color:rgba(124,58,237,.2)}
+.feat-tag.g{background:rgba(0,229,122,.08);color:var(--green);border-color:rgba(0,229,122,.2)}
+
+/* FAQ */
+#faq{background:var(--bg2)}
+.faq-hdr{text-align:center;max-width:600px;margin:0 auto 64px}
+.faq-wrap{max-width:780px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+.faq-item{background:var(--bg3);border:1px solid var(--border);border-radius:18px;overflow:hidden;transition:border-color .3s}
+.faq-item.open{border-color:rgba(0,212,255,.22)}
+.faq-q{display:flex;align-items:center;justify-content:space-between;padding:22px 28px;cursor:pointer;gap:16px;transition:background .2s}
+.faq-q:hover{background:rgba(0,212,255,.03)}
+.faq-q h4{font-size:15px;font-weight:600;line-height:1.4}
+.faq-chev{width:30px;height:30px;flex-shrink:0;border:1px solid rgba(255,255,255,.08);border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .3s;font-size:11px;color:var(--muted)}
+.faq-item.open .faq-chev{transform:rotate(180deg);background:rgba(0,212,255,.1);border-color:rgba(0,212,255,.3);color:var(--cyan)}
+.faq-a{max-height:0;overflow:hidden;transition:max-height .4s cubic-bezier(.4,0,.2,1)}
+.faq-a-in{padding:0 28px 24px;font-size:14px;color:var(--muted);line-height:1.8}
+.faq-item.open .faq-a{max-height:300px}
+
+/* CTA */
+#cta{background:var(--bg);padding:80px 64px}
+.cta-box{max-width:900px;margin:0 auto;background:linear-gradient(135deg,rgba(0,212,255,.06),rgba(124,58,237,.08));border:1px solid rgba(0,212,255,.12);border-radius:32px;padding:72px 64px;text-align:center;position:relative;overflow:hidden}
+.cta-box::before{content:'';position:absolute;top:-80px;left:50%;transform:translateX(-50%);width:500px;height:200px;background:radial-gradient(ellipse,rgba(124,58,237,.2),transparent 70%);pointer-events:none}
+.cta-box h2{font-family:'Syne',sans-serif;font-size:44px;font-weight:800;letter-spacing:-1.5px;margin-bottom:16px}
+.cta-box p{font-size:17px;color:var(--muted);margin-bottom:40px}
+
+/* FOOTER */
+footer{background:var(--bg2);border-top:1px solid var(--border);padding:44px 64px;display:flex;align-items:center;justify-content:space-between}
+.foot-logo{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;background:linear-gradient(135deg,var(--cyan),var(--violet));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px}
+.foot-sub{font-size:12px;color:var(--muted)}
+.foot-right{text-align:right;font-size:13px;color:var(--muted)}
+.foot-right strong{color:var(--text)}
+
+/* REVEAL */
+.reveal{opacity:0;transform:translateY(36px);transition:opacity .7s ease,transform .7s ease}
+.reveal.visible{opacity:1;transform:none}
+.reveal-d1{transition-delay:.1s}.reveal-d2{transition-delay:.2s}.reveal-d3{transition-delay:.3s}.reveal-d4{transition-delay:.4s}
+
+@keyframes fadeSlide{from{opacity:0;transform:translateY(-20px)}to{opacity:1;transform:none}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+
+@media(max-width:900px){
+  nav{padding:16px 24px}nav.scrolled{padding:12px 24px}.nav-links{display:none}
+  section{padding:72px 24px}#stats{padding:36px 24px}
+  .stats-row{grid-template-columns:repeat(2,1fr);gap:16px}
+  .stat-item{border-right:none;padding:16px;background:var(--bg3);border:1px solid var(--border);border-radius:14px}
+  .about-grid{grid-template-columns:1fr;gap:40px}
+  .steps-grid{grid-template-columns:repeat(2,1fr)}.steps-connector{display:none}
+  .feat-grid{grid-template-columns:1fr}.hero-float{display:none}
+  .cta-box{padding:40px 24px}footer{flex-direction:column;gap:20px;text-align:center}.foot-right{text-align:center}
+}
+</style>
+</head>
+<body>
+<div id="cursor"></div>
+<div id="cursor-ring"></div>
+
+<nav id="navbar">
+  <a href="home.html" class="nav-logo">DecisionIQ</a>
+  <ul class="nav-links">
+    <li><a href="#about">About</a></li>
+    <li><a href="#how">How It Works</a></li>
+    <li><a href="#features">Features</a></li>
+    <li><a href="#faq">FAQ</a></li>
+  </ul>
+  <a href="login.html" class="btn-nav-login">Sign In →</a>
+</nav>
+
+<!-- HERO -->
+<section id="hero">
+  <canvas id="hero-canvas"></canvas>
+  <div class="hero-mesh"></div>
+  <div class="hero-float f1">
+    <div class="float-card"><div class="fc-lbl">Risk Score</div><div class="fc-val r">7.8 <span style="font-size:12px;color:var(--muted)">/10</span></div><div class="fc-pill hr">🚨 High Risk</div></div>
+  </div>
+  <div class="hero-float f2">
+    <div class="float-card"><div class="fc-lbl">Bias Detected</div><div style="font-size:13px;font-weight:600;color:var(--amber);margin-bottom:2px">🎭 Overconfidence</div><div style="font-size:10px;color:var(--muted)">High confidence, low exp.</div></div>
+  </div>
+  <div class="hero-float f3">
+    <div class="float-card"><div class="fc-lbl">Decision Quality</div><div class="fc-val g">82%</div><div class="fc-pill lr">✓ A Grade</div></div>
+  </div>
+  <div class="hero-float f4">
+    <div class="float-card"><div class="fc-lbl">What-If Sim</div><div style="display:flex;align-items:center;gap:8px"><span style="font-size:16px;color:var(--red);font-weight:700">7.8</span><span style="color:var(--cyan);font-size:18px">→</span><span style="font-size:16px;color:var(--green);font-weight:700">4.2</span></div><div style="font-size:10px;color:var(--green);margin-top:3px">↓ 3.6 pts reduction</div></div>
+  </div>
+  <div class="hero-content">
+    <div class="hero-chip"><span class="chip-pulse"></span>EdgeIQ Hackathon 2025 · HackStormUnit</div>
+    <h1 class="hero-title">Know Before<br><span class="grad">You Leap.</span></h1>
+    <p class="hero-sub">DecisionIQ uses Machine Learning to analyze your stress, experience, and information gaps — and tells you exactly how risky your decision is, before you make it.</p>
+    <div class="hero-btns">
+      <a href="login.html" class="btn-hero-primary">⚡ Start Analyzing Free</a>
+      <a href="#how" class="btn-hero-ghost">See How It Works ↓</a>
+    </div>
+  </div>
+  <div class="scroll-hint"><div class="scroll-track"><div class="scroll-ball"></div></div>Scroll</div>
+</section>
+
+<!-- STATS -->
+<div id="stats">
+  <div class="stats-row">
+    <div class="stat-item"><div class="stat-num" data-target="1200">0</div><div class="stat-lbl">Training Scenarios</div></div>
+    <div class="stat-item"><div class="stat-num" data-target="84" data-suffix="%">0%</div><div class="stat-lbl">Model Accuracy</div></div>
+    <div class="stat-item"><div class="stat-num" data-target="5">0</div><div class="stat-lbl">Bias Types Detected</div></div>
+    <div class="stat-item"><div class="stat-num" data-target="7">0</div><div class="stat-lbl">Feature Signals</div></div>
+  </div>
+</div>
+
+<!-- ABOUT -->
+<section id="about">
+  <div class="about-grid">
+    <div class="reveal">
+      <div class="live-card">
+        <div class="live-lbl"><span class="live-dot"></span>Live Risk Analysis</div>
+        <div class="fb-rows">
+          <div class="fb-row"><span class="fb-label">Time Pressure</span><div class="fb-track"><div class="fb-fill r" data-w="85"></div></div><span class="fb-val" style="color:var(--red)">8.5</span></div>
+          <div class="fb-row"><span class="fb-label">Stress Level</span><div class="fb-track"><div class="fb-fill a" data-w="72"></div></div><span class="fb-val" style="color:var(--amber)">7.2</span></div>
+          <div class="fb-row"><span class="fb-label">Confidence</span><div class="fb-track"><div class="fb-fill c" data-w="40"></div></div><span class="fb-val" style="color:var(--cyan)">4.0</span></div>
+          <div class="fb-row"><span class="fb-label">Experience</span><div class="fb-track"><div class="fb-fill g" data-w="60"></div></div><span class="fb-val" style="color:var(--green)">6.0</span></div>
+          <div class="fb-row"><span class="fb-label">Information</span><div class="fb-track"><div class="fb-fill v" data-w="35"></div></div><span class="fb-val" style="color:#a78bfa">35%</span></div>
+        </div>
+        <div class="risk-summary">
+          <div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Risk Score</div><div class="rs-num">7.8 <span>/ 10</span></div></div>
+          <div class="rs-badge">🚨 HIGH RISK</div>
+        </div>
+        <div class="bias-float"><span style="font-size:22px">🎭</span><div><div class="bf-name">Overconfidence Bias</div><div class="bf-desc">Detected · High impact</div></div></div>
+      </div>
+    </div>
+    <div class="reveal reveal-d1">
+      <div class="eyebrow">About DecisionIQ</div>
+      <h2 class="sec-title">Why Decisions Fail — and How to Stop It</h2>
+      <p class="sec-sub">People make decisions every day under pressure, uncertainty, and cognitive bias. DecisionIQ measures your decision conditions and warns you before you commit.</p>
+      <div class="about-points">
+        <div class="ap-row"><div class="ap-icon">🎯</div><div class="ap-text"><h4>Predictive Risk Score</h4><p>ML model trained on 1,200 scenarios produces a 0–10 risk score with Low / Medium / High classification.</p></div></div>
+        <div class="ap-row"><div class="ap-icon">🔍</div><div class="ap-text"><h4>Explainable Factor Breakdown</h4><p>See exactly which conditions drive your risk — not just a number, but the why behind it.</p></div></div>
+        <div class="ap-row"><div class="ap-icon">🔬</div><div class="ap-text"><h4>What-If Simulation</h4><p>Change any condition and watch your risk score update live. Find the single highest-leverage improvement.</p></div></div>
+        <div class="ap-row"><div class="ap-icon">🧠</div><div class="ap-text"><h4>Cognitive Bias Detector</h4><p>5 named biases automatically flagged — Overconfidence, Tunnel Vision, Stress Panic, and more.</p></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how">
+  <div class="hiw-hdr reveal"><div class="eyebrow">The Process</div><h2 class="sec-title">How DecisionIQ Works</h2><p class="sec-sub">Five steps from your situation to a clear, actionable risk insight.</p></div>
+  <div class="steps-wrap">
+    <div class="steps-connector"></div>
+    <div class="steps-grid">
+      <div class="step-card reveal reveal-d1"><div class="step-num">1</div><span class="step-icon">📋</span><h3>Pick Your Scenario</h3><p>Choose a preset (Job Decision, Exam, Investment) or pick your context — work, academic, or personal.</p></div>
+      <div class="step-card reveal reveal-d2"><div class="step-num">2</div><span class="step-icon">🎯</span><h3>Rate Your Conditions</h3><p>Answer 8 emoji-based questions about your stress, time pressure, confidence, experience, and information.</p></div>
+      <div class="step-card reveal reveal-d3"><div class="step-num">3</div><span class="step-icon">🤖</span><h3>ML Analyzes Risk</h3><p>Random Forest model classifies Low / Medium / High risk with a 0–10 score and success probability.</p></div>
+      <div class="step-card reveal reveal-d4"><div class="step-num">4</div><span class="step-icon">📊</span><h3>See Full Breakdown</h3><p>Factor chart, bias badges, decision persona, scorecard, archetype comparison, goal indicator, and action plan.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="feat-hdr reveal"><div class="eyebrow">Features</div><h2 class="sec-title">Everything You Need to Decide Better</h2><p class="sec-sub">A complete decision intelligence toolkit — no paid APIs, fully offline-capable.</p></div>
+  <div class="feat-grid">
+    <div class="feat-card reveal reveal-d1"><div class="feat-icon">📊</div><h3>Factor Breakdown Chart</h3><p>Horizontal bars showing exactly how much each condition contributes to your risk. The visual answer to "why is this risky?"</p><span class="feat-tag">Explainable AI</span></div>
+    <div class="feat-card reveal reveal-d2"><div class="feat-icon">🔬</div><h3>What-If Simulator</h3><p>Adjust any factor and watch the risk score animate live. Before 7.8 → After 5.2 with a clear delta. The live demo moment judges remember.</p><span class="feat-tag">Interactive</span></div>
+    <div class="feat-card reveal reveal-d3"><div class="feat-icon">🧠</div><h3>Cognitive Bias Detector</h3><p>5 named biases flagged as dramatic unlock badges — Overconfidence, Tunnel Vision, Stress Panic, Narrow Framing, Analysis Paralysis.</p><span class="feat-tag v">Novel Feature</span></div>
+    <div class="feat-card reveal reveal-d1"><div class="feat-icon">🎭</div><h3>Decision Persona</h3><p>"You are The Panicked Novice" — a named archetype that feels personal. Shows product-market fit instinct and is instantly shareable.</p><span class="feat-tag v">Novel Feature</span></div>
+    <div class="feat-card reveal reveal-d2"><div class="feat-icon">🏆</div><h3>Decision Scorecard</h3><p>"Decision Quality: 62% — C+" with a doughnut chart. Converts the 0–10 score into an intuitive letter grade.</p><span class="feat-tag g">Novel Feature</span></div>
+    <div class="feat-card reveal reveal-d3"><div class="feat-icon">🎯</div><h3>Goal-Support Indicator</h3><p>Select Career / Academic / Personal / Financial. Context-specific warnings on top of the ML prediction — tells you if conditions match your goal.</p><span class="feat-tag g">Novel Feature</span></div>
+    <div class="feat-card reveal reveal-d1"><div class="feat-icon">🔁</div><h3>Reversibility Indicator</h3><p>Tell us if your decision is reversible. High-risk + reversible = recoverable. High-risk + irreversible = critical warning. Decision theory backed.</p><span class="feat-tag v">Novel Feature</span></div>
+    <div class="feat-card reveal reveal-d2"><div class="feat-icon">🎮</div><h3>Scenario Presets</h3><p>"Job Interview," "Exam Strategy," "Investment," "Relationship" — one click fills all 8 wizard steps with realistic values for instant analysis.</p><span class="feat-tag">Quick Start</span></div>
+    <div class="feat-card reveal reveal-d3"><div class="feat-icon">📈</div><h3>Session Risk Trend</h3><p>Line chart and scatter of your risk scores over time. "Your decisions improved 23% this session." Shows longitudinal learning value.</p><span class="feat-tag">Analytics</span></div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq">
+  <div class="faq-hdr reveal"><div class="eyebrow">FAQ</div><h2 class="sec-title">Common Questions</h2><p class="sec-sub">Everything you need to know about DecisionIQ and how it works under the hood.</p></div>
+  <div class="faq-wrap">
+    <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)"><h4>Does DecisionIQ tell me what decision to make?</h4><div class="faq-chev">▼</div></div><div class="faq-a"><div class="faq-a-in">No — and intentionally so. DecisionIQ evaluates the <strong>conditions</strong> under which you're making a decision, not the decision itself. It answers: "Are you in a good state to make this call right now?" You stay in full control of the actual choice.</div></div></div>
+    <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)"><h4>How accurate is the ML model?</h4><div class="faq-chev">▼</div></div><div class="faq-a"><div class="faq-a-in">The Random Forest model achieves ~84% accuracy on a held-out test set. It was trained on 1,200 synthetic scenarios with realistic correlations — stress and time pressure co-vary naturally, experienced people tend to be more confident, and overconfident novices are flagged separately with overconfidence bias rules.</div></div></div>
+    <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)"><h4>What is the Cognitive Bias Detector?</h4><div class="faq-chev">▼</div></div><div class="faq-a"><div class="faq-a-in">The system checks for 5 named decision biases from your input pattern: <strong>Overconfidence</strong> (high confidence, low experience), <strong>Tunnel Vision</strong> (high pressure + few alternatives), <strong>Information Illusion</strong> (confident but under-informed), <strong>Stress Panic</strong> (extreme stress + few alternatives), and <strong>Analysis Paralysis</strong> (max alternatives + very low confidence). Each detected bias unlocks as a dramatic named badge.</div></div></div>
+    <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)"><h4>Does it use paid APIs or external services?</h4><div class="faq-chev">▼</div></div><div class="faq-a"><div class="faq-a-in">No. DecisionIQ is entirely powered by a <strong>Random Forest ML model</strong> built with scikit-learn (free, open-source). All explanations, bias detections, goal indicators, and advice are rule-based logic — no OpenAI, no paid APIs, no rate limits. The backend runs fully on your local machine.</div></div></div>
+    <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)"><h4>What is the Reversibility Indicator?</h4><div class="faq-chev">▼</div></div><div class="faq-a"><div class="faq-a-in">One question in the wizard asks: "Is this decision reversible?" If you're in high-risk territory but the decision is reversible, the system labels it "High Risk (Recoverable)" — cautious but not alarming. If it's irreversible, you get a critical warning: "Treat this as one category riskier." This is backed by actual decision theory.</div></div></div>
+    <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)"><h4>Who is this built for?</h4><div class="faq-chev">▼</div></div><div class="faq-a"><div class="faq-a-in">Three audiences: <strong>Students</strong> choosing projects or career paths, <strong>Professionals</strong> evaluating business or investment decisions, and <strong>Individuals</strong> navigating important personal choices. If you've ever wondered "am I in the right headspace for this?" — this tool gives a data-backed answer.</div></div></div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section id="cta">
+  <div class="cta-box reveal">
+    <h2>Ready to Decide Smarter?</h2>
+    <p>Takes 90 seconds. Works for any decision — career, academic, personal, financial.</p>
+    <a href="login.html" class="btn-hero-primary">⚡ Start Analyzing Free</a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div><div class="foot-logo">DecisionIQ</div><div class="foot-sub">AI Decision Risk Predictor · EdgeIQ Hackathon 2025</div></div>
+  <div class="foot-right"><div>Team <strong>HackStormUnit</strong></div><div style="margin-top:4px">Jakku Divyanju Sree · Hima U</div></div>
+</footer>
+
+<script>
+const cur=document.getElementById('cursor'),ring=document.getElementById('cursor-ring');
+let mx=0,my=0,rx=0,ry=0;
+document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;cur.style.left=(mx-5)+'px';cur.style.top=(my-5)+'px'});
+document.querySelectorAll('a,button,.step-card,.feat-card,.faq-q').forEach(el=>{
+  el.addEventListener('mouseenter',()=>ring.classList.add('hover'));
+  el.addEventListener('mouseleave',()=>ring.classList.remove('hover'));
+});
+function animRing(){rx+=(mx-rx)*.12;ry+=(my-ry)*.12;ring.style.left=(rx-18)+'px';ring.style.top=(ry-18)+'px';requestAnimationFrame(animRing)}animRing();
+window.addEventListener('scroll',()=>document.getElementById('navbar').classList.toggle('scrolled',scrollY>50));
+// Particles
+const canvas=document.getElementById('hero-canvas'),ctx=canvas.getContext('2d');
+let W,H,pts=[];
+function resize(){W=canvas.width=innerWidth;H=canvas.height=innerHeight}
+resize();window.addEventListener('resize',resize);
+for(let i=0;i<90;i++)pts.push({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.5,vy:(Math.random()-.5)*.5,r:Math.random()*2+.5,a:Math.random()*.5+.1,col:Math.random()>.5?'0,212,255':'124,58,237'});
+let mX=W/2,mY=H/2;
+window.addEventListener('mousemove',e=>{mX=e.clientX;mY=e.clientY});
+function drawP(){
+  ctx.clearRect(0,0,W,H);
+  for(let i=0;i<pts.length;i++)for(let j=i+1;j<pts.length;j++){
+    const d=Math.hypot(pts[i].x-pts[j].x,pts[i].y-pts[j].y);
+    if(d<130){ctx.beginPath();ctx.strokeStyle=`rgba(0,212,255,${.07*(1-d/130)})`;ctx.lineWidth=.5;ctx.moveTo(pts[i].x,pts[i].y);ctx.lineTo(pts[j].x,pts[j].y);ctx.stroke()}
+  }
+  pts.forEach(p=>{
+    const d=Math.hypot(p.x-mX,p.y-mY);
+    if(d<180){ctx.beginPath();ctx.strokeStyle=`rgba(0,212,255,${.2*(1-d/180)})`;ctx.lineWidth=.8;ctx.moveTo(p.x,p.y);ctx.lineTo(mX,mY);ctx.stroke()}
+    p.x+=p.vx;p.y+=p.vy;
+    if(p.x<0||p.x>W)p.vx*=-1;if(p.y<0||p.y>H)p.vy*=-1;
+    ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=`rgba(${p.col},${p.a})`;ctx.fill();
+  });requestAnimationFrame(drawP);
+}drawP();
+// Reveal
+const io=new IntersectionObserver(entries=>entries.forEach(e=>{
+  if(e.isIntersecting){e.target.classList.add('visible');e.target.querySelectorAll('.fb-fill[data-w]').forEach(b=>{setTimeout(()=>{b.style.width=b.dataset.w+'%'},300)})}
+}),{threshold:.15});
+document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+// Counters
+document.querySelectorAll('.stat-num[data-target]').forEach(el=>{
+  new IntersectionObserver((entries,obs)=>{
+    if(!entries[0].isIntersecting)return;obs.disconnect();
+    const target=+el.dataset.target,suffix=el.dataset.suffix||'',dur=1600,step=target/(dur/16);
+    let cur=0;const t=setInterval(()=>{cur=Math.min(cur+step,target);el.textContent=Math.floor(cur)+suffix;if(cur>=target)clearInterval(t)},16);
+  },{threshold:.5}).observe(el);
+});
+// FAQ
+function toggleFaq(btn){
+  const item=btn.closest('.faq-item'),open=item.classList.contains('open');
+  document.querySelectorAll('.faq-item.open').forEach(i=>i.classList.remove('open'));
+  if(!open)item.classList.add('open');
+}
+</script>
+</body>
+</html>
