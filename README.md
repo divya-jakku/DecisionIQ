@@ -1,22 +1,18 @@
-# 🧠 DecisionIQ — AI Decision Risk Predictor
+DecisionIQ — AI Decision Risk Predictor
 
 DecisionIQ is a web-based system that evaluates the **risk of a decision before it is made** by analyzing decision-making conditions such as stress, confidence, and available information.
 
----
+Features
 
-## 🚀 Features
+- Risk Score (0–10)
+- Risk Level (Low / Medium / High)
+- Success Probability
+- Key Risk Factor Analysis
+- Cognitive Bias Detection
+- Archetype Comparison (You vs Expert)
+- Actionable Suggestions
 
-- 📊 Risk Score (0–10)
-- 🎯 Risk Level (Low / Medium / High)
-- 📈 Success Probability
-- 🧠 Key Risk Factor Analysis
-- ⚠️ Cognitive Bias Detection
-- 👥 Archetype Comparison (You vs Expert)
-- 💡 Actionable Suggestions
-
----
-
-## 🧠 Tech Stack
+## Tech Stack
 
 - **Frontend:** HTML, CSS, JavaScript  
 - **Backend:** FastAPI (Python)  
@@ -25,7 +21,7 @@ DecisionIQ is a web-based system that evaluates the **risk of a decision before 
 
 ---
 
-## 📂 Project Structure
+## Project Structure
 DecisionIQ/
 ├── backend/
 │ └── main.py
@@ -40,9 +36,9 @@ DecisionIQ/
 │ └── archetypes.json
 └── README.md
 
----
 
-## ⚙️ Setup Instructions
+
+##  Setup Instructions
 
 1️⃣ Install Dependencies
 pip install fastapi uvicorn scikit-learn pandas numpy joblib
